@@ -1,0 +1,124 @@
+/* DuitKita — design tokens + base UI styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --radius-sm: 12px;
+  --radius: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+}
+
+/* ── Light theme (default) ── */
+.dk {
+  --bg: #eef1ef;
+  --app-bg: #f6f8f6;
+  --surface: #ffffff;
+  --surface-2: #f1f4f2;
+  --surface-3: #e8ece9;
+  --text: #15201b;
+  --text-2: #5a6b63;
+  --text-3: #8b988f;
+  --border: #e7ebe8;
+  --border-2: #dde3df;
+
+  --primary: #047857;
+  --primary-700: #036249;
+  --primary-600: #058564;
+  --primary-tint: #e6f2ed;
+  --primary-tint-2: #d3e8e0;
+  --on-primary: #ffffff;
+
+  --income: #0e9f6e;
+  --income-tint: #e3f5ee;
+  --expense: #e0603f;
+  --expense-tint: #fbeae4;
+  --transfer: #3b6fd4;
+  --transfer-tint: #e6edfa;
+  --adjust: #8b7355;
+  --adjust-tint: #f1ece5;
+
+  --shadow-sm: 0 1px 2px rgba(20,40,30,0.05), 0 1px 3px rgba(20,40,30,0.04);
+  --shadow: 0 4px 16px rgba(20,40,30,0.07), 0 2px 6px rgba(20,40,30,0.04);
+  --shadow-lg: 0 12px 34px rgba(20,40,30,0.12);
+  --shadow-primary: 0 8px 24px rgba(4,120,87,0.32);
+  --statusbar: var(--app-bg);
+}
+
+/* ── Dark theme ── */
+.dk[data-dark="true"] {
+  --bg: #0b110e;
+  --app-bg: #0f1613;
+  --surface: #18211c;
+  --surface-2: #1f2a24;
+  --surface-3: #26332c;
+  --text: #e9efeb;
+  --text-2: #9eb0a7;
+  --text-3: #6c7d75;
+  --border: #283330;
+  --border-2: #30403a;
+
+  --primary: #14b083;
+  --primary-700: #0f9d75;
+  --primary-600: #16c091;
+  --primary-tint: #11362c;
+  --primary-tint-2: #154437;
+  --on-primary: #04211a;
+
+  --income: #2dc28d;
+  --income-tint: #133229;
+  --expense: #f0795a;
+  --expense-tint: #36211b;
+  --transfer: #5b8def;
+  --transfer-tint: #1a2840;
+  --adjust: #c0a786;
+  --adjust-tint: #2c261d;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 6px 18px rgba(0,0,0,0.4);
+  --shadow-lg: 0 14px 36px rgba(0,0,0,0.5);
+  --shadow-primary: 0 8px 24px rgba(0,0,0,0.45);
+  --statusbar: var(--app-bg);
+}
+
+* { box-sizing: border-box; }
+
+.dk {
+  font-family: var(--font);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* tabular numerals — money is the hero */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "ss01" 1; letter-spacing: -0.01em; }
+
+.dk button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+.dk input, .dk textarea { font-family: inherit; }
+
+/* hide scrollbars inside the phone */
+.dk-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.dk-scroll::-webkit-scrollbar { display: none; }
+
+/* tap feedback */
+.tap { transition: transform .12s ease, background .15s ease, opacity .15s ease; -webkit-tap-highlight-color: transparent; }
+.tap:active { transform: scale(0.97); opacity: .9; }
+
+/* generic card */
+.card { background: var(--surface); border-radius: var(--radius); }
+
+/* screen enter animation */
+@keyframes dk-screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes dk-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dk-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dk-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes dk-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-7px)} 40%,80%{transform:translateX(7px)} }
+
+.screen-in { animation: dk-screen-in .32s cubic-bezier(.22,1,.36,1); }
+.sheet-in { animation: dk-sheet-up .34s cubic-bezier(.22,1,.36,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-in, .sheet-in { animation: none; }
+}
