@@ -18,6 +18,10 @@ import '../../features/debts/debts_screen.dart';
 import '../../features/recurring/recurring_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/transactions/transaction_detail_screen.dart';
+import '../../features/wallets/wallet_detail_screen.dart';
+import '../../features/goals/goal_detail_screen.dart';
+import '../../features/debts/debt_detail_screen.dart';
 
 // Router provider so we can inject Riverpod for the redirect guard.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -134,103 +138,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
       ),
+
+      // Detail routes (pushed, no bottom nav)
+      GoRoute(
+        path: '/transaction/:clientId',
+        builder: (context, state) => TransactionDetailScreen(
+          clientId: state.pathParameters['clientId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/wallet/:id',
+        builder: (context, state) => WalletDetailScreen(
+          walletId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/goal/:id',
+        builder: (context, state) => GoalDetailScreen(
+          goalId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/debt/:id',
+        builder: (context, state) => DebtDetailScreen(
+          debtId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
     ],
   );
   return router;
 });
-
-// Keep a non-provider export for backwards compat with existing app.dart reference.
-// app.dart uses routerConfig: appRouter — update it to use the provider.
-final appRouter = GoRouter(
-  initialLocation: '/lock',
-  routes: [
-    GoRoute(
-      path: '/lock',
-      builder: (context, state) => const AppLockScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-      routes: [
-        GoRoute(
-          path: 'create',
-          builder: (context, state) => const CreateFamilyScreen(),
-        ),
-        GoRoute(
-          path: 'join',
-          builder: (context, state) => const JoinFamilyScreen(),
-        ),
-      ],
-    ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) =>
-          ShellScreen(navigationShell: navigationShell),
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/home',
-              builder: (context, state) => const HomeScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/transactions',
-              builder: (context, state) => const TransactionsScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/wallets',
-              builder: (context, state) => const WalletsScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-          ],
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/add-transaction',
-      pageBuilder: (context, state) => MaterialPage(
-        fullscreenDialog: true,
-        key: state.pageKey,
-        child: const AddTransactionScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/budget',
-      builder: (context, state) => const BudgetScreen(),
-    ),
-    GoRoute(
-      path: '/goals',
-      builder: (context, state) => const GoalsScreen(),
-    ),
-    GoRoute(
-      path: '/debts',
-      builder: (context, state) => const DebtsScreen(),
-    ),
-    GoRoute(
-      path: '/recurring',
-      builder: (context, state) => const RecurringScreen(),
-    ),
-    GoRoute(
-      path: '/reports',
-      builder: (context, state) => const ReportsScreen(),
-    ),
-    GoRoute(
-      path: '/notifications',
-      builder: (context, state) => const NotificationsScreen(),
-    ),
-  ],
-);
