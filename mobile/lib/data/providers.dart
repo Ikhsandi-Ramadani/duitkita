@@ -121,6 +121,11 @@ final currentUserIdProvider = StreamProvider<int?>((ref) {
   return ref.watch(sessionRepoProvider).watchCurrentUserId();
 });
 
+/// Household invite code (from SessionKv). Null while not yet loaded.
+final inviteCodeProvider = StreamProvider<String?>((ref) {
+  return ref.watch(sessionRepoProvider).watchInviteCode();
+});
+
 /// All non-deleted members.
 final membersProvider = StreamProvider<List<Member>>((ref) {
   return ref.watch(memberRepoProvider).watchAll();

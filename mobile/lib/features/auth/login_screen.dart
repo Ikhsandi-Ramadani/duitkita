@@ -193,6 +193,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final sessionRepo = ref.read(sessionRepoProvider);
       final userId = data['user']?['id'] as int? ?? 1;
       await sessionRepo.setCurrentUserId(userId);
+      final inviteCode =
+          data['household']?['invite_code'] as String?;
+      if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
       if (mounted) context.go('/home');
     } catch (e) {
       setState(() {

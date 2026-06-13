@@ -35,4 +35,8 @@ class SessionRepository {
   Stream<int?> watchCurrentUserId() {
     return watch('currentUserId').map((v) => v == null ? null : int.tryParse(v));
   }
+
+  Future<void> setInviteCode(String code) => set('inviteCode', code);
+
+  Stream<String?> watchInviteCode() => watch('inviteCode');
 }

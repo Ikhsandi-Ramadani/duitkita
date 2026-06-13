@@ -677,14 +677,16 @@ class _BiometricToggle extends ConsumerWidget {
 // Invite sheet
 // ---------------------------------------------------------------------------
 
-class _InviteSheet extends StatelessWidget {
+class _InviteSheet extends ConsumerWidget {
   const _InviteSheet();
 
-  static const _code = 'PRT4K9';
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
+    final codeAsync = ref.watch(inviteCodeProvider);
+    final code = codeAsync.value ?? '------';
+    final hasCode = codeAsync.value != null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 36),
       child: Column(
@@ -706,16 +708,24 @@ class _InviteSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.base),
               border: Border.all(color: colors.primaryTint2),
             ),
-            child: Text(
-              _code,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
-                color: colors.primary,
-                letterSpacing: 8,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
+            child: codeAsync.isLoading
+                ? SizedBox(
+                    height: 48,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: colors.primary),
+                    ),
+                  )
+                : Text(
+                    code,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      color: hasCode ? colors.primary : colors.text2,
+                      letterSpacing: 8,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
           ),
           const SizedBox(height: 24),
           Row(
@@ -724,20 +734,20 @@ class _InviteSheet extends StatelessWidget {
                 child: SizedBox(
                   height: 46,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(
-                          const ClipboardData(text: _code));
-                      Navigator.of(context).pop();
-                      AppToast.show(context, 'Kode disalin ke clipboard');
-                    },
+                    onPressed: hasCode
+                        ? () {
+                            Clipboard.setData(ClipboardData(text: code));
+                            Navigator.of(context).pop();
+                            AppToast.show(context, 'Kode disalin ke clipboard');
+                          }
+                        : null,
                     icon: const Icon(Icons.copy_rounded, size: 17),
                     label: const Text('Salin'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.sm)),
+                          borderRadius: BorderRadius.circular(AppRadius.sm)),
                       elevation: 0,
                       textStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 14, fontWeight: FontWeight.w700),
@@ -760,8 +770,7 @@ class _InviteSheet extends StatelessWidget {
                       side: BorderSide(color: colors.border2, width: 1.5),
                       foregroundColor: colors.text,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.sm)),
+                          borderRadius: BorderRadius.circular(AppRadius.sm)),
                       textStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 14, fontWeight: FontWeight.w600),
                     ),

@@ -120,12 +120,18 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
     setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
-      await api.register({
+      final data = await api.register({
         'name': _nameCtrl.text.trim(),
         'family_name': _familyCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'password': _passCtrl.text,
       });
+      final sessionRepo = ref.read(sessionRepoProvider);
+      final userId = data['user']?['id'] as int?;
+      if (userId != null) await sessionRepo.setCurrentUserId(userId);
+      final inviteCode =
+          data['household']?['invite_code'] as String?;
+      if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
       if (mounted) context.go('/home');
     } catch (_) {
       // Offline fallback: demo seed
