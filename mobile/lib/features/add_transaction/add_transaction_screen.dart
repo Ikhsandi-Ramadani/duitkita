@@ -627,7 +627,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           crossAxisCount: 3,
           mainAxisSpacing: 6,
           crossAxisSpacing: 6,
-          childAspectRatio: 2.2,
+          mainAxisExtent: 52,
         ),
         itemCount: keys.length,
         itemBuilder: (_, i) => _KeypadButton(

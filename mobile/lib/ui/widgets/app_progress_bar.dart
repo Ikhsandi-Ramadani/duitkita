@@ -29,6 +29,7 @@ class _AppProgressBarState extends State<AppProgressBar>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late Animation<double> _anim;
+  bool _started = false;
 
   @override
   void initState() {
@@ -39,10 +40,19 @@ class _AppProgressBarState extends State<AppProgressBar>
     );
     _anim = Tween<double>(begin: 0, end: widget.fraction.clamp(0, 1))
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    if (!MediaQuery.of(context).disableAnimations) {
-      _ctrl.forward();
-    } else {
-      _ctrl.value = 1;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // MediaQuery is unavailable in initState; start the animation here once.
+    if (!_started) {
+      _started = true;
+      if (MediaQuery.of(context).disableAnimations) {
+        _ctrl.value = 1;
+      } else {
+        _ctrl.forward();
+      }
     }
   }
 
