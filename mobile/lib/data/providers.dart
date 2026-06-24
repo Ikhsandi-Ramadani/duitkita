@@ -12,6 +12,7 @@ import 'repositories/budget_repository.dart';
 import 'repositories/goal_repository.dart';
 import 'repositories/debt_repository.dart';
 import 'repositories/recurring_repository.dart';
+import 'repositories/notification_repository.dart';
 import 'sync/sync_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -93,6 +94,10 @@ final recurringRepoProvider = Provider<RecurringRepository>((ref) {
   return RecurringRepository(ref.watch(dbProvider));
 });
 
+final notificationRepoProvider = Provider<NotificationRepository>((ref) {
+  return NotificationRepository(ref.watch(dbProvider));
+});
+
 // ---------------------------------------------------------------------------
 // SyncService
 // ---------------------------------------------------------------------------
@@ -109,6 +114,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     recurringRepo: ref.watch(recurringRepoProvider),
     memberRepo: ref.watch(memberRepoProvider),
     sessionRepo: ref.watch(sessionRepoProvider),
+    notifRepo: ref.watch(notificationRepoProvider),
   );
 });
 
@@ -187,4 +193,31 @@ final txByWalletProvider =
 final txGroupedProvider = StreamProvider.family<
     Map<DateTime, List<Transaction>>, TransactionFilters>((ref, filters) {
   return ref.watch(transactionRepoProvider).watchGroupedByDate(filters);
+});
+
+// ---------------------------------------------------------------------------
+// Member actions
+// ---------------------------------------------------------------------------
+
+/// Removes a member by userId: calls the API then deletes from local DB.
+/// Usage: await ref.read(removeMemberProvider)(userId);
+final removeMemberProvider = Provider<Future<void> Function(int)>((ref) {
+  return (int userId) async {
+    await ref.read(apiClientProvider).removeMember(userId);
+    await ref.read(memberRepoProvider).deleteById(userId);
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Notification providers
+// ---------------------------------------------------------------------------
+
+/// All notifications ordered by createdAt desc.
+final notificationsProvider = StreamProvider<List<Notification>>((ref) {
+  return ref.watch(notificationRepoProvider).watchAll();
+});
+
+/// Live unread notification count (stream, updates instantly on read/new).
+final unreadNotifCountProvider = StreamProvider<int>((ref) {
+  return ref.watch(notificationRepoProvider).watchUnreadCount();
 });

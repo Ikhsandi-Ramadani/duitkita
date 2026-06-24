@@ -129,8 +129,12 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsTile(
                           icon: Icons.group_outlined,
                           label: 'Kelola anggota',
-                          onTap: () => AppToast.show(
-                              context, 'Segera hadir'),
+                          onTap: () => AppSheet.show(
+                            context: context,
+                            child: _KelolaAnggotaSheet(
+                              currentUserId: userId,
+                            ),
+                          ),
                         ),
                         _SettingsTile(
                           icon: Icons.category_outlined,
@@ -669,6 +673,244 @@ class _BiometricToggle extends ConsumerWidget {
             .set('biometricEnabled', v.toString());
       },
       activeThumbColor: colors.primary,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Kelola Anggota sheet
+// ---------------------------------------------------------------------------
+
+class _KelolaAnggotaSheet extends ConsumerWidget {
+  const _KelolaAnggotaSheet({required this.currentUserId});
+  final int currentUserId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final membersAsync = ref.watch(membersProvider);
+    final members = membersAsync.value ?? [];
+
+    final currentMember = members.cast<Member?>().firstWhere(
+          (m) => m?.id == currentUserId,
+          orElse: () => null,
+        );
+    final isOwner = currentMember?.role == 'owner';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Text('Kelola Anggota',
+                style: AppText.screenTitle(color: colors.text)),
+          ),
+          const SizedBox(height: 16),
+          if (membersAsync.isLoading)
+            const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          else if (members.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text('Belum ada anggota.',
+                    style: AppText.body(color: colors.text3)),
+              ),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: AppRadius.borderRadiusBase,
+                border: Border.all(color: colors.border),
+                boxShadow: AppShadows.sm,
+              ),
+              child: Column(
+                children: members.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final m = entry.value;
+                  final isSelf = m.id == currentUserId;
+                  final memberIsOwner = m.role == 'owner';
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        child: Row(
+                          children: [
+                            MemberAvatar(
+                              hue: m.avatarHue,
+                              initial:
+                                  m.name.isNotEmpty ? m.name[0] : '?',
+                              size: 38,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isSelf ? '${m.name} (kamu)' : m.name,
+                                    style: AppText.body(color: colors.text)
+                                        .copyWith(
+                                            fontWeight: FontWeight.w600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    m.email,
+                                    style: AppText.label(color: colors.text3),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: memberIsOwner
+                                    ? colors.primaryTint
+                                    : colors.surface2,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                memberIsOwner ? 'Pemilik' : 'Anggota',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: memberIsOwner
+                                      ? colors.primary
+                                      : colors.text2,
+                                ),
+                              ),
+                            ),
+                            if (isOwner && !isSelf && !memberIsOwner) ...[
+                              const SizedBox(width: 4),
+                              _RemoveButton(
+                                member: m,
+                                onConfirmed: () async {
+                                  try {
+                                    await ref
+                                        .read(removeMemberProvider)
+                                        .call(m.id);
+                                    if (context.mounted) {
+                                      AppToast.show(
+                                        context,
+                                        '${m.name} telah dihapus dari keluarga',
+                                      );
+                                    }
+                                  } catch (_) {
+                                    if (context.mounted) {
+                                      AppToast.show(
+                                        context,
+                                        'Gagal menghapus anggota. Coba lagi.',
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (idx < members.length - 1)
+                        Divider(
+                          height: 1,
+                          color: colors.border,
+                          indent: 64,
+                        ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RemoveButton extends StatefulWidget {
+  const _RemoveButton({required this.member, required this.onConfirmed});
+  final Member member;
+  final Future<void> Function() onConfirmed;
+
+  @override
+  State<_RemoveButton> createState() => _RemoveButtonState();
+}
+
+class _RemoveButtonState extends State<_RemoveButton> {
+  bool _loading = false;
+
+  Future<void> _showConfirm() async {
+    final colors = context.appColors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Text(
+          'Hapus Anggota',
+          style: AppText.cardTitle(color: colors.text),
+        ),
+        content: Text(
+          'Hapus ${widget.member.name} dari keluarga?',
+          style: AppText.body(color: colors.text2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Batal',
+                style: AppText.body(color: colors.text2)
+                    .copyWith(fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Hapus',
+                style: AppText.body(color: colors.expense)
+                    .copyWith(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _loading = true);
+      await widget.onConfirmed();
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    if (_loading) {
+      return const SizedBox(
+        width: 36,
+        height: 36,
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child:
+              CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return IconButton(
+      onPressed: _showConfirm,
+      icon: Icon(Icons.person_remove_outlined,
+          color: colors.expense, size: 19),
+      splashRadius: 20,
+      tooltip: 'Hapus anggota',
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      padding: EdgeInsets.zero,
     );
   }
 }

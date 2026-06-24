@@ -375,4 +375,14 @@ class TransactionRepository {
   Future<void> upsertFromServer(TransactionsCompanion companion) async {
     await _db.into(_db.transactions).insertOnConflictUpdate(companion);
   }
+
+  /// Persists a receipt path returned by the server into the local DB row.
+  Future<void> updateReceiptPath(String clientId, String path) async {
+    await (_db.update(_db.transactions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .write(TransactionsCompanion(
+      receiptPath: Value(path),
+      updatedAt: Value(DateTime.now()),
+    ));
+  }
 }

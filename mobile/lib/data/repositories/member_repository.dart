@@ -25,4 +25,8 @@ class MemberRepository {
       }
     });
   }
+
+  Future<void> deleteById(int id) async {
+    await (_db.delete(_db.members)..where((m) => m.id.equals(id))).go();
+  }
 }

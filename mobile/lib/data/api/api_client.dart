@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path/path.dart' show basename;
 
 const _kBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -117,5 +120,67 @@ class ApiClient {
     final meData = await me();
     final syncData = await pullSince(0);
     return {'me': meData, 'sync': syncData};
+  }
+
+  // -------------------------------------------------------------------------
+  // Household member endpoints
+  // -------------------------------------------------------------------------
+
+  Future<void> removeMember(int userId) async {
+    await _dio.delete('/household/members/$userId');
+  }
+
+  // -------------------------------------------------------------------------
+  // Notification endpoints
+  // -------------------------------------------------------------------------
+
+  Future<void> markNotificationRead(int id) async {
+    await _dio.put('/notifications/$id/read');
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _dio.put('/notifications/read-all');
+  }
+
+  // -------------------------------------------------------------------------
+  // Transaction splits
+  // -------------------------------------------------------------------------
+
+  /// Returns the splits list for a synced transaction.
+  Future<List<Map<String, dynamic>>> getTransactionSplits(int serverId) async {
+    final res = await _dio.get('/transactions/$serverId');
+    final splits = res.data['splits'] as List? ?? [];
+    return splits.cast<Map<String, dynamic>>();
+  }
+
+  /// Replaces all splits for a synced transaction.
+  Future<List<Map<String, dynamic>>> updateSplits(
+      int serverId, List<Map<String, dynamic>> splits) async {
+    final res = await _dio.put(
+      '/transactions/$serverId/splits',
+      data: {'splits': splits},
+    );
+    return (res.data['splits'] as List).cast<Map<String, dynamic>>();
+  }
+
+  // -------------------------------------------------------------------------
+  // Receipt upload
+  // -------------------------------------------------------------------------
+
+  /// Uploads [imageFile] as the receipt for [transactionId].
+  /// Returns the server-relative path, e.g. `/storage/receipts/abc.jpg`.
+  Future<String> uploadReceipt(int transactionId, File imageFile) async {
+    final formData = FormData.fromMap({
+      'receipt': await MultipartFile.fromFile(
+        imageFile.path,
+        filename: basename(imageFile.path),
+        contentType: DioMediaType('image', 'jpeg'),
+      ),
+    });
+    final res = await _dio.post(
+      '/transactions/$transactionId/receipt',
+      data: formData,
+    );
+    return res.data['receipt_url'] as String;
   }
 }

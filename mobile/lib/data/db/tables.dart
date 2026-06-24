@@ -148,6 +148,24 @@ class Recurrings extends Table {
 }
 
 // ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+class Notifications extends Table {
+  IntColumn get id => integer()();
+  IntColumn get householdId => integer()();
+  IntColumn get userId => integer().nullable()();
+  TextColumn get type => text()();
+  TextColumn get title => text()();
+  TextColumn get body => text()();
+  TextColumn get data => text().nullable()(); // JSON string
+  DateTimeColumn get readAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// ---------------------------------------------------------------------------
 // SessionKv
 // ---------------------------------------------------------------------------
 class SessionKv extends Table {

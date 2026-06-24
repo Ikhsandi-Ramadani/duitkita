@@ -292,6 +292,8 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
 class _BellButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotifCountProvider).value ?? 0;
+
     return GestureDetector(
       onTap: () => context.push('/notifications'),
       child: Stack(
@@ -307,18 +309,30 @@ class _BellButton extends ConsumerWidget {
             child: const Icon(Icons.notifications_outlined,
                 color: Colors.white, size: 22),
           ),
-          Positioned(
-            top: 6,
-            right: 8,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFD23D),
-                shape: BoxShape.circle,
+          if (unreadCount > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFD23D),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1A1A1A),
+                      height: 1,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

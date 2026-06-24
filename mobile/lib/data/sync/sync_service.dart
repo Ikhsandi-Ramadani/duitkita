@@ -10,6 +10,7 @@ import '../repositories/debt_repository.dart';
 import '../repositories/recurring_repository.dart';
 import '../repositories/member_repository.dart';
 import '../repositories/session_repository.dart';
+import '../repositories/notification_repository.dart';
 
 class SyncService {
   SyncService({
@@ -23,6 +24,7 @@ class SyncService {
     required this.recurringRepo,
     required this.memberRepo,
     required this.sessionRepo,
+    required this.notifRepo,
   });
 
   final ApiClient api;
@@ -35,6 +37,7 @@ class SyncService {
   final RecurringRepository recurringRepo;
   final MemberRepository memberRepo;
   final SessionRepository sessionRepo;
+  final NotificationRepository notifRepo;
 
   /// Push all pending (pendingSync=true) transactions to the server.
   Future<void> pushPending() async {
@@ -251,6 +254,13 @@ class SyncService {
                 createdBy: Value(r['created_by'] as int),
               ))
           .toList());
+    }
+
+    // Notifications
+    if (data['notifications'] != null) {
+      await notifRepo.upsertAll(
+        (data['notifications'] as List).cast<Map<String, dynamic>>(),
+      );
     }
   }
 }
