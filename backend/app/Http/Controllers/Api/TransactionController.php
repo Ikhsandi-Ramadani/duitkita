@@ -6,12 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TransactionRequest;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Wallet;
 use App\Services\BalanceService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class TransactionController extends Controller
@@ -72,6 +75,14 @@ class TransactionController extends Controller
             return $transaction;
         });
 
+        NotificationService::create(
+            $transaction->household_id,
+            'transaction',
+            'Transaksi Baru',
+            $request->user()->name . ' menambah transaksi Rp' . number_format($transaction->amount, 0, ',', '.'),
+            ['transaction_id' => $transaction->id],
+        );
+
         return response()->json(new TransactionResource($transaction->load('category')), 201);
     }
 
@@ -79,7 +90,9 @@ class TransactionController extends Controller
     {
         $this->authorizeHousehold($request, $transaction->household_id);
 
-        return response()->json(new TransactionResource($transaction->load('category')));
+        return response()->json(new TransactionResource(
+            $transaction->load(['category', 'splits.user:id,name,avatar_hue'])
+        ));
     }
 
     public function update(TransactionRequest $request, Transaction $transaction): JsonResponse
@@ -141,6 +154,70 @@ class TransactionController extends Controller
         });
 
         return response()->json(null, 204);
+    }
+
+    public function updateSplits(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'splits'            => 'required|array|min:1',
+            'splits.*.user_id' => 'required|integer|exists:users,id',
+            'splits.*.amount'  => 'required|integer|min:1',
+        ]);
+
+        $transaction = Transaction::where('id', $id)
+            ->where('household_id', $request->user()->household_id)
+            ->firstOrFail();
+
+        // Validate total splits <= transaction amount
+        $total = collect($request->splits)->sum('amount');
+        if ($total > $transaction->amount) {
+            return response()->json(['message' => 'Total split melebihi jumlah transaksi'], 422);
+        }
+
+        // Validate all user_ids belong to same household
+        $householdUserIds = User::where('household_id', $request->user()->household_id)
+            ->pluck('id')
+            ->toArray();
+
+        foreach ($request->splits as $split) {
+            if (!in_array($split['user_id'], $householdUserIds)) {
+                return response()->json(['message' => 'User tidak ditemukan dalam household'], 422);
+            }
+        }
+
+        DB::transaction(function () use ($transaction, $request) {
+            $transaction->splits()->delete();
+            $transaction->splits()->createMany($request->splits);
+        });
+
+        return response()->json([
+            'splits' => $transaction->splits()->with('user:id,name,avatar_hue')->get(),
+        ]);
+    }
+
+    public function uploadReceipt(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'receipt' => 'required|image|max:5120', // 5 MB
+        ]);
+
+        $transaction = Transaction::where('id', $id)
+            ->where('household_id', $request->user()->household_id)
+            ->firstOrFail();
+
+        // Delete old receipt if one is already stored
+        if ($transaction->receipt_path) {
+            Storage::disk('public')->delete($transaction->receipt_path);
+        }
+
+        $path = $request->file('receipt')->store('receipts', 'public');
+
+        $transaction->update(['receipt_path' => $path]);
+
+        return response()->json([
+            'receipt_path' => $transaction->receipt_path,
+            'receipt_url'  => Storage::disk('public')->url($path),
+        ]);
     }
 
     private function authorizeHousehold(Request $request, int $householdId): void

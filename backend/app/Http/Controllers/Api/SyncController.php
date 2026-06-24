@@ -8,6 +8,7 @@ use App\Http\Resources\TransactionResource;
 use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Debt;
+use App\Models\Notification;
 use App\Models\Recurring;
 use App\Models\SavingsGoal;
 use App\Models\Transaction;
@@ -48,6 +49,7 @@ class SyncController extends Controller
         $transactions = Transaction::withTrashed()
             ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
+            ->with('splits.user:id,name,avatar_hue')
             ->get();
 
         $budgets = Budget::where('household_id', $householdId)
@@ -68,6 +70,12 @@ class SyncController extends Controller
             ->where('updated_at', '>=', $sinceDate)
             ->get();
 
+        $notifications = Notification::where('household_id', $householdId)
+            ->where('created_at', '>', $sinceDate)
+            ->latest()
+            ->take(50)
+            ->get();
+
         return response()->json([
             'server_time'   => now()->toISOString(),
             'wallets'       => $wallets,
@@ -77,6 +85,7 @@ class SyncController extends Controller
             'savings_goals' => $savingsGoals,
             'debts'         => $debts,
             'recurrings'    => $recurrings,
+            'notifications' => $notifications,
         ]);
     }
 

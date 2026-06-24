@@ -13,8 +13,10 @@ use App\Http\Resources\HouseholdResource;
 use App\Http\Resources\UserResource;
 use App\Models\Household;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +64,14 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('mobile')->plainTextToken;
+
+        NotificationService::create(
+            $household->id,
+            'member_join',
+            'Anggota Baru',
+            $user->name . ' bergabung ke keluarga',
+            ['user_id' => $user->id],
+        );
 
         return response()->json([
             'token'     => $token,
@@ -130,6 +140,38 @@ class AuthController extends Controller
         }
 
         return response()->json(['verified' => true]);
+    }
+
+    public function removeMember(Request $request, int $userId): JsonResponse
+    {
+        $owner = $request->user();
+
+        if ($owner->role !== 'owner') {
+            return response()->json(['message' => 'Hanya pemilik household yang dapat menghapus anggota.'], 403);
+        }
+
+        if ($owner->id === $userId) {
+            return response()->json(['message' => 'Pemilik tidak dapat menghapus diri sendiri.'], 422);
+        }
+
+        $householdId = $owner->household_id;
+
+        $target = User::where('id', $userId)
+            ->where('household_id', $householdId)
+            ->first();
+
+        if (!$target) {
+            return response()->json(['message' => 'Anggota tidak ditemukan dalam household ini.'], 404);
+        }
+
+        DB::transaction(function () use ($target) {
+            $target->update([
+                'household_id' => null,
+                'role'         => 'member',
+            ]);
+        });
+
+        return response()->json(['message' => 'Anggota berhasil dihapus']);
     }
 
     private function generateUniqueInviteCode(): string

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BudgetController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DebtController;
 use App\Http\Controllers\Api\RecurringController;
@@ -34,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('budgets', BudgetController::class);
     Route::apiResource('transactions', TransactionController::class);
+    Route::post('transactions/{id}/receipt', [TransactionController::class, 'uploadReceipt']);
+    Route::put('transactions/{id}/splits', [TransactionController::class, 'updateSplits']);
 
     Route::apiResource('savings-goals', SavingsGoalController::class);
     Route::post('savings-goals/{savings_goal}/contribute', [SavingsGoalController::class, 'contribute']);
@@ -44,8 +47,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('recurrings', RecurringController::class);
     Route::post('recurrings/{recurring}/run', [RecurringController::class, 'run']);
 
+    // Household member management
+    Route::delete('household/members/{user_id}', [AuthController::class, 'removeMember']);
+
     // Reports
     Route::get('reports/monthly', [ReportController::class, 'monthly']);
+
+    // Notifications
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::put('notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::put('notifications/{id}/read', [NotificationController::class, 'markRead']);
 
     // Sync
     Route::get('sync', [SyncController::class, 'pull']);

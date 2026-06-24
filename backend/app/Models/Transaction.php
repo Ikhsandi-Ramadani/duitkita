@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaction extends Model
@@ -68,5 +69,10 @@ class Transaction extends Model
     public function spender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'spent_by');
+    }
+
+    public function splits(): HasMany
+    {
+        return $this->hasMany(TransactionSplit::class);
     }
 }
