@@ -19,6 +19,7 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
   final _nameCtrl = TextEditingController();
   final _familyCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
@@ -28,6 +29,7 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
     _nameCtrl.dispose();
     _familyCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
@@ -60,6 +62,10 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
             const SizedBox(height: 12),
             _Field(ctrl: _emailCtrl, label: 'Email', icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
+                onChanged: (_) => setState(() {})),
+            const SizedBox(height: 12),
+            _Field(ctrl: _phoneCtrl, label: 'No. HP (opsional)', icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
                 onChanged: (_) => setState(() {})),
             const SizedBox(height: 12),
             _Field(ctrl: _passCtrl, label: 'Kata sandi', icon: Icons.lock_outline_rounded,
@@ -120,12 +126,16 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
     setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
-      final data = await api.register({
+      final body = {
         'name': _nameCtrl.text.trim(),
         'family_name': _familyCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'password': _passCtrl.text,
-      });
+      };
+      if (_phoneCtrl.text.trim().isNotEmpty) {
+        body['phone'] = _phoneCtrl.text.trim();
+      }
+      final data = await api.register(body);
       final sessionRepo = ref.read(sessionRepoProvider);
       final userId = data['user']?['id'] as int?;
       if (userId != null) await sessionRepo.setCurrentUserId(userId);
