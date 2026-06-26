@@ -10,6 +10,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/add_transaction/add_transaction_screen.dart';
 import '../../features/auth/app_lock_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/splash/splash_screen.dart';
 import '../../features/auth/create_family_screen.dart';
 import '../../features/auth/join_family_screen.dart';
 import '../../features/budget/budget_screen.dart';
@@ -26,10 +27,13 @@ import '../../features/debts/debt_detail_screen.dart';
 // Router provider so we can inject Riverpod for the redirect guard.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
-    initialLocation: '/lock',
+    initialLocation: '/splash',
     redirect: (context, state) async {
       final userId = await ref.read(sessionRepoProvider).getCurrentUserId();
       final loc = state.matchedLocation;
+
+      // Always allow splash to render
+      if (loc.startsWith('/splash')) return null;
 
       // No session user → force login
       if (userId == null) {
@@ -45,6 +49,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Splash
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
       // Auth routes (no shell)
       GoRoute(
         path: '/lock',
