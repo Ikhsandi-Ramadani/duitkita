@@ -13,7 +13,7 @@ import '../../ui/widgets/member_avatar.dart';
 import '../../ui/widgets/app_progress_bar.dart';
 import '../../ui/widgets/progress_ring_small.dart';
 import '../../ui/widgets/tx_row.dart';
-import '../../ui/widgets/app_toast.dart';
+import '../scan_struk/scan_struk_service.dart';
 import '../../ui/widgets/empty_state.dart';
 import '../../ui/widgets/entrance_animation.dart';
 import 'providers/home_providers.dart';
@@ -520,7 +520,18 @@ class _ActionGrid extends ConsumerWidget {
       _GridItem(icon: Icons.arrow_downward_rounded, label: 'Pengeluaran', primary: true,
           onTap: () => context.push('/add-transaction?preset=expense')),
       _GridItem(icon: Icons.document_scanner_outlined, label: 'Scan\nStruk', primary: true,
-          onTap: () => AppToast.show(context, 'Segera hadir')),
+          onTap: () async {
+            final result = await ScanStrukService().scan(context);
+            if (result != null && context.mounted) {
+              final parts = <String>[];
+              if (result.amount != null) parts.add('amount=${result.amount}');
+              if (result.note != null) {
+                parts.add('note=${Uri.encodeQueryComponent(result.note!)}');
+              }
+              final qs = parts.isNotEmpty ? '?${parts.join('&')}' : '';
+              context.push('/add-transaction$qs');
+            }
+          }),
       // Row 2 — feature hubs (surface bg)
       _GridItem(icon: Icons.tune_rounded, label: 'Anggaran', primary: false,
           onTap: () => context.push('/budget')),

@@ -61,6 +61,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final routerState = GoRouterState.of(context);
     final editClientId = routerState.uri.queryParameters['edit'];
     final preset = routerState.uri.queryParameters['preset'];
+    final scanAmount = routerState.uri.queryParameters['amount'];
+    final scanNote = routerState.uri.queryParameters['note'];
 
     if (editClientId != null && editClientId.isNotEmpty) {
       final db = ref.read(dbProvider);
@@ -127,6 +129,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _type = type;
         _wallet = wallet;
         _targetWallet = targetWallet;
+        // Pre-fill from Scan Struk if provided
+        if (scanAmount != null) {
+          final parsed = int.tryParse(scanAmount);
+          if (parsed != null && parsed > 0) _amount = parsed;
+        }
+        if (scanNote != null && scanNote.isNotEmpty) _note = scanNote;
         _initialized = true;
       });
     }
