@@ -69,11 +69,9 @@ class _WalletDetailBody extends ConsumerWidget {
     final isShared = wallet.scope == 'shared';
     final isOwn = wallet.ownerUserId == userId || isShared;
 
-    final owner = wallet.ownerUserId != null
-        ? members.cast<Member?>().firstWhere(
-              (m) => m?.id == wallet.ownerUserId,
-              orElse: () => null,
-            )
+    final Member? owner = wallet.ownerUserId != null
+        ? members.whereType<Member>()
+            .where((m) => m.id == wallet.ownerUserId).firstOrNull
         : null;
 
     final ownerLabel = isShared
@@ -531,26 +529,16 @@ class _WalletHistory extends ConsumerWidget {
                           final idx = entry.key;
                           final tx = entry.value;
 
-                          final recorder =
-                              members.cast<Member?>().firstWhere(
-                                    (m) => m?.id == tx.recordedBy,
-                                    orElse: () => null,
-                                  );
-                          final spentBy = tx.spentBy != null
-                              ? members.cast<Member?>().firstWhere(
-                                    (m) => m?.id == tx.spentBy,
-                                    orElse: () => null,
-                                  )
+                          final Member? recorder = members.whereType<Member>()
+                              .where((m) => m.id == tx.recordedBy).firstOrNull;
+                          final Member? spentBy = tx.spentBy != null
+                              ? members.whereType<Member>()
+                                  .where((m) => m.id == tx.spentBy).firstOrNull
                               : null;
-                          final wallet = wallets.cast<Wallet?>().firstWhere(
-                                (w) => w?.id == tx.walletId,
-                                orElse: () => null,
-                              );
+                          final Wallet? wallet = wallets.whereType<Wallet>()
+                              .where((w) => w.id == tx.walletId).firstOrNull;
                           final Category? category = tx.categoryId != null
-                              ? categories.cast<Category?>().firstWhere(
-                                    (c) => c?.id == tx.categoryId,
-                                    orElse: () => null,
-                                  )
+                              ? categories.whereType<Category>().where((c) => c.id == tx.categoryId).firstOrNull
                               : null;
 
                           final catName =
