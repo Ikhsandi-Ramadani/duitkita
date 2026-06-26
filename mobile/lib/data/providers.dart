@@ -14,6 +14,7 @@ import 'repositories/debt_repository.dart';
 import 'repositories/recurring_repository.dart';
 import 'repositories/notification_repository.dart';
 import 'sync/sync_service.dart';
+import '../core/services/update_service.dart';
 
 // ---------------------------------------------------------------------------
 // Database
@@ -106,6 +107,10 @@ final notificationRepoProvider = Provider<NotificationRepository>((ref) {
 // ---------------------------------------------------------------------------
 // SyncService
 // ---------------------------------------------------------------------------
+
+final updateServiceProvider = Provider<UpdateService>((ref) {
+  return UpdateService(ref.watch(apiClientProvider).dio);
+});
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService(

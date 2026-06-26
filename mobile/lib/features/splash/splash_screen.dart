@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/services/update_service.dart';
+import '../../data/providers.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fade;
@@ -28,9 +32,43 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 2), () async {
+      final updateService = ref.read(updateServiceProvider);
+      final update = await updateService.checkUpdate();
+      if (update != null && mounted) {
+        await _showUpdateDialog(update);
+      }
       if (mounted) context.go('/lock');
     });
+  }
+
+  Future<void> _showUpdateDialog(UpdateInfo update) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !update.force,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update Tersedia 🎉'),
+        content: Text(
+          'Versi ${update.version} tersedia\n\n${update.notes}',
+        ),
+        actions: [
+          if (!update.force)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Nanti'),
+            ),
+          FilledButton(
+            onPressed: () async {
+              await launchUrl(
+                Uri.parse(update.url),
+                mode: LaunchMode.externalApplication,
+              );
+            },
+            child: const Text('Update Sekarang'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

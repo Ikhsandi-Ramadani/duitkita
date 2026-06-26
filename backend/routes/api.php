@@ -10,8 +10,12 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SavingsGoalController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
+
+// Public version check (no auth required)
+Route::get('version', [VersionController::class, 'index']);
 
 // Public auth routes
 Route::prefix('auth')->group(function () {
