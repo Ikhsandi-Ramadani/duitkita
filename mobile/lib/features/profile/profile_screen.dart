@@ -1031,6 +1031,9 @@ class _InviteSheet extends ConsumerWidget {
 // Edit profile sheet
 // ---------------------------------------------------------------------------
 
+// Avatar hue options shown as colour circles
+const List<double> _kAvatarHues = [0, 30, 60, 120, 180, 210, 270, 330];
+
 class _EditProfileSheet extends ConsumerStatefulWidget {
   const _EditProfileSheet({required this.member});
   final Member member;
@@ -1042,43 +1045,120 @@ class _EditProfileSheet extends ConsumerStatefulWidget {
 
 class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _passwordCtrl;
+  late final TextEditingController _confirmCtrl;
+  late double _selectedHue;
   bool _saving = false;
+  String? _errorMsg;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.member.name);
+    _phoneCtrl = TextEditingController();
+    _emailCtrl = TextEditingController(text: widget.member.email);
+    _passwordCtrl = TextEditingController();
+    _confirmCtrl = TextEditingController();
+    _selectedHue = widget.member.avatarHue.toDouble();
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
+  bool get _canSave {
+    if (_saving) return false;
+    if (_nameCtrl.text.trim().isEmpty) return false;
+    final pw = _passwordCtrl.text;
+    if (pw.isNotEmpty && pw != _confirmCtrl.text) return false;
+    return true;
+  }
+
   Future<void> _save() async {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty || _saving) return;
-    setState(() => _saving = true);
-    await ref.read(memberRepoProvider).upsert(
-          MembersCompanion(
-            id: Value(widget.member.id),
-            name: Value(name),
-            email: Value(widget.member.email),
-            role: Value(widget.member.role),
-            avatarHue: Value(widget.member.avatarHue),
-          ),
-        );
-    if (mounted) {
-      Navigator.of(context).pop();
-      AppToast.show(context, 'Profil diperbarui');
+    if (!_canSave) return;
+    setState(() {
+      _saving = true;
+      _errorMsg = null;
+    });
+
+    try {
+      final body = <String, dynamic>{
+        'name': _nameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'avatar_hue': _selectedHue.round(),
+      };
+      final phone = _phoneCtrl.text.trim();
+      if (phone.isNotEmpty) body['phone'] = phone;
+      final pw = _passwordCtrl.text;
+      if (pw.isNotEmpty) {
+        body['password'] = pw;
+        body['password_confirmation'] = _confirmCtrl.text;
+      }
+
+      await ref.read(apiClientProvider).updateMe(body);
+
+      await ref.read(memberRepoProvider).upsert(
+            MembersCompanion(
+              id: Value(widget.member.id),
+              name: Value(_nameCtrl.text.trim()),
+              email: Value(_emailCtrl.text.trim()),
+              role: Value(widget.member.role),
+              avatarHue: Value(_selectedHue.round()),
+            ),
+          );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppToast.show(context, 'Profil diperbarui');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _errorMsg = 'Gagal menyimpan. Periksa koneksi atau data yang diisi.';
+        });
+      }
     }
+  }
+
+  InputDecoration _fieldDecoration(AppColors colors, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: AppText.body(color: colors.text2),
+      filled: true,
+      fillColor: colors.surface2,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderSide: BorderSide(color: colors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderSide: BorderSide(color: colors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Padding(
+    final passwordMismatch = _passwordCtrl.text.isNotEmpty &&
+        _passwordCtrl.text != _confirmCtrl.text;
+
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -1091,42 +1171,141 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         children: [
           Text('Edit Profil',
               style: AppText.screenTitle(color: colors.text)),
-          const SizedBox(height: 16),
-          Text('Nama', style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 20),
+
+          // ── Nama Lengkap ────────────────────────────────────────────────
+          Text('Nama Lengkap', style: AppText.label(color: colors.text2)),
           const SizedBox(height: 6),
           TextField(
             controller: _nameCtrl,
             autofocus: true,
             style: AppText.body(color: colors.text),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: colors.surface2,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide: BorderSide(color: colors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide: BorderSide(color: colors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide:
-                    BorderSide(color: colors.primary, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
-            ),
+            decoration: _fieldDecoration(colors, 'Nama lengkap'),
             onChanged: (_) => setState(() {}),
           ),
+          const SizedBox(height: 14),
+
+          // ── No. HP ───────────────────────────────────────────────────────
+          Text('No. HP', style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            style: AppText.body(color: colors.text),
+            decoration: _fieldDecoration(colors, 'Contoh: 08123456789'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+
+          // ── Email ────────────────────────────────────────────────────────
+          Text('Email', style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            style: AppText.body(color: colors.text),
+            decoration: _fieldDecoration(colors, 'Email'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+
+          // ── Password baru (opsional) ─────────────────────────────────────
+          Text('Password Baru (opsional)',
+              style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _passwordCtrl,
+            obscureText: true,
+            style: AppText.body(color: colors.text),
+            decoration: _fieldDecoration(colors, 'Kosongkan jika tidak diubah'),
+            onChanged: (_) => setState(() {}),
+          ),
+          if (_passwordCtrl.text.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            TextField(
+              controller: _confirmCtrl,
+              obscureText: true,
+              style: AppText.body(color: colors.text),
+              decoration: _fieldDecoration(
+                      colors, 'Konfirmasi password baru')
+                  .copyWith(
+                errorText: passwordMismatch ? 'Password tidak cocok' : null,
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+          const SizedBox(height: 18),
+
+          // ── Avatar hue picker ────────────────────────────────────────────
+          Text('Warna Avatar', style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _kAvatarHues.map((hue) {
+              final isSelected =
+                  (_selectedHue - hue).abs() < 1;
+              final color = HSLColor.fromAHSL(1, hue, 0.65, 0.50).toColor();
+              return GestureDetector(
+                onTap: () => setState(() => _selectedHue = hue),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: isSelected
+                        ? Border.all(color: colors.text, width: 3)
+                        : Border.all(color: Colors.transparent, width: 3),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.5),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check,
+                          size: 16, color: Colors.white)
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
           const SizedBox(height: 20),
+
+          // ── Error message ────────────────────────────────────────────────
+          if (_errorMsg != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                _errorMsg!,
+                style: AppText.micro(color: Colors.red),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── Save button ──────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _nameCtrl.text.trim().isNotEmpty && !_saving
-                  ? _save
-                  : null,
+              onPressed: _canSave ? _save : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,
                 foregroundColor: colors.onPrimary,

@@ -95,6 +95,11 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> updateMe(Map<String, dynamic> body) async {
+    final res = await _dio.put('/me', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<void> setPin(String pin) async {
     await _dio.put('/me/pin', data: {'pin': pin});
   }

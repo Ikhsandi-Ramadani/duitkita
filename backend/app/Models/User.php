@@ -20,6 +20,7 @@ class User extends Authenticatable
         'password',
         'household_id',
         'role',
+        'is_super_admin',
         'avatar_hue',
         'pin',
     ];
@@ -37,6 +38,7 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'pin'               => 'hashed',
             'avatar_hue'        => 'integer',
+            'is_super_admin'    => 'boolean',
         ];
     }
 

@@ -126,9 +126,17 @@ class AuthController extends Controller
 
     public function updateMe(UpdateProfileRequest $request): JsonResponse
     {
-        $request->user()->update($request->only(['name', 'avatar_hue']));
+        $user = $request->user();
 
-        return response()->json(new UserResource($request->user()->fresh()));
+        $data = $request->only(['name', 'phone', 'email', 'avatar_hue']);
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return response()->json(new UserResource($user->fresh()));
     }
 
     public function updatePin(UpdatePinRequest $request): JsonResponse
