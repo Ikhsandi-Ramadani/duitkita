@@ -18,16 +18,41 @@ import '../../ui/widgets/empty_state.dart';
 import '../../ui/widgets/entrance_animation.dart';
 import 'providers/home_providers.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-sync when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(backgroundSyncProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
     final userIdAsync = ref.watch(currentUserIdProvider);
     final userId = userIdAsync.value ?? 1;
 
-    // Trigger background sync (push pending + pull) on every home mount
+    // Trigger background sync on mount + foreground resume
     ref.watch(backgroundSyncProvider);
 
     return Scaffold(

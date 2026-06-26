@@ -216,6 +216,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       }
 
       if (mounted) {
+        ref.invalidate(backgroundSyncProvider);
         AppToast.show(context, 'Transaksi tersimpan ✓');
         context.pop();
       }
