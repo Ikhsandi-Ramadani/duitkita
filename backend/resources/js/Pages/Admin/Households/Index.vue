@@ -30,7 +30,7 @@
                         </div>
                     </template>
                 </Column>
-                <Column header="Pemilik">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Pemilik</span>
                     </template>
@@ -38,7 +38,7 @@
                         <span class="text-slate-600 text-sm">{{ data.owner?.name ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Kode Undang">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Kode Undang</span>
                     </template>
@@ -48,7 +48,7 @@
                         </code>
                     </template>
                 </Column>
-                <Column header="Anggota">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Anggota</span>
                     </template>
@@ -61,7 +61,7 @@
                         </span>
                     </template>
                 </Column>
-                <Column header="Dibuat">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dibuat</span>
                     </template>

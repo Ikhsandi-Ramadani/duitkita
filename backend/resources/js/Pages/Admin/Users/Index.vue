@@ -39,7 +39,7 @@
                         <span class="text-slate-600 text-sm">{{ data.email }}</span>
                     </template>
                 </Column>
-                <Column header="Role">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Role</span>
                     </template>
@@ -56,7 +56,7 @@
                         </span>
                     </template>
                 </Column>
-                <Column header="Keluarga">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Keluarga</span>
                     </template>
@@ -64,7 +64,7 @@
                         <span class="text-slate-600 text-sm">{{ data.household?.name ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Bergabung">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Bergabung</span>
                     </template>

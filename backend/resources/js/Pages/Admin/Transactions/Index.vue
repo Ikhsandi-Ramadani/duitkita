@@ -59,7 +59,7 @@
                 data-key="id"
                 class="p-datatable-sm"
             >
-                <Column header="Catatan">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Catatan</span>
                     </template>
@@ -67,7 +67,7 @@
                         <span class="text-slate-700 text-sm">{{ data.note ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Jumlah">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Jumlah</span>
                     </template>
@@ -82,7 +82,7 @@
                         </span>
                     </template>
                 </Column>
-                <Column header="Tipe">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Tipe</span>
                     </template>
@@ -103,7 +103,7 @@
                         </span>
                     </template>
                 </Column>
-                <Column header="Kategori">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Kategori</span>
                     </template>
@@ -111,7 +111,7 @@
                         <span class="text-slate-600 text-sm">{{ data.category?.name ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Dompet">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dompet</span>
                     </template>
@@ -119,7 +119,7 @@
                         <span class="text-slate-600 text-sm">{{ data.wallet?.name ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Dicatat Oleh">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dicatat Oleh</span>
                     </template>
@@ -127,7 +127,7 @@
                         <span class="text-slate-600 text-sm">{{ data.recorder?.name ?? '-' }}</span>
                     </template>
                 </Column>
-                <Column header="Tanggal">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Tanggal</span>
                     </template>
