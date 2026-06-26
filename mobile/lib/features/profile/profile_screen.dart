@@ -283,16 +283,6 @@ class _ProfileCard extends ConsumerWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              AppSheet.show(
-                context: context,
-                child: _EditProfileSheet(member: member),
-              );
-            },
-            icon: Icon(Icons.edit_outlined, color: colors.text3, size: 20),
-            splashRadius: 20,
-          ),
         ],
       ),
     );

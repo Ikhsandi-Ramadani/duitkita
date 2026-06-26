@@ -12,6 +12,7 @@ class UserController extends Controller
     public function index()
     {
         $users = User::with('household:id,name')
+            ->select(['id', 'name', 'email', 'phone', 'household_id', 'role', 'is_super_admin', 'created_at', 'updated_at'])
             ->latest()
             ->paginate(15)
             ->withQueryString();
