@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../data/providers.dart';
-import '../../data/db/seed.dart';
 import '../../ui/widgets/app_top_bar.dart';
 
 class CreateFamilyScreen extends ConsumerStatefulWidget {
@@ -139,17 +138,21 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
       final sessionRepo = ref.read(sessionRepoProvider);
       final userId = data['user']?['id'] as int?;
       if (userId != null) await sessionRepo.setCurrentUserId(userId);
-      final inviteCode =
-          data['household']?['invite_code'] as String?;
+      final inviteCode = data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
+
+      // Pull fresh data from server
+      await ref.read(dbProvider).clearAll();
+      await ref.read(syncServiceProvider).initialPull();
+
       if (mounted) context.go('/home');
-    } catch (_) {
-      // Offline fallback: demo seed
-      final db = ref.read(dbProvider);
-      await seedIfEmpty(db);
-      final sessionRepo = ref.read(sessionRepoProvider);
-      await sessionRepo.setCurrentUserId(1);
-      if (mounted) context.go('/home');
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e')),
+        );
+      }
     }
   }
 }
