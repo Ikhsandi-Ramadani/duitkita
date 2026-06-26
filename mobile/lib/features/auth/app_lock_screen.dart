@@ -46,13 +46,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const Spacer(flex: 2),
-              _BrandMark(sessionRepo: sessionRepo),
-              const Spacer(flex: 2),
-              _UserGreeting(member: member),
-              const SizedBox(height: 20),
+              const Spacer(flex: 3),
+              _UserGreeting(member: member, checking: _checking),
+              const SizedBox(height: 24),
               _PinDots(count: _digits.length),
-              const Spacer(flex: 2),
+              const Spacer(flex: 3),
               _Keypad(
                 onDigit: _onDigit,
                 onBackspace: _onBackspace,
@@ -89,8 +87,19 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   Future<void> _verifyPin() async {
     setState(() => _checking = true);
-    await Future.delayed(const Duration(milliseconds: 220));
-    if (mounted) context.go('/home');
+    try {
+      final ok = await ref.read(apiClientProvider).verifyPin(_digits.join());
+      if (!mounted) return;
+      if (ok) {
+        context.go('/home');
+      } else {
+        HapticFeedback.vibrate();
+        setState(() { _digits.clear(); _checking = false; });
+      }
+    } catch (_) {
+      // No PIN set yet or network error → allow through
+      if (mounted) context.go('/home');
+    }
   }
 
   Future<void> _onBiometric() async {
@@ -160,38 +169,38 @@ class _BrandMark extends StatelessWidget {
 }
 
 class _UserGreeting extends StatelessWidget {
-  const _UserGreeting({required this.member});
+  const _UserGreeting({required this.member, this.checking = false});
   final Member? member;
+  final bool checking;
 
   @override
   Widget build(BuildContext context) {
-    if (member == null) return const SizedBox.shrink();
     return Column(
       children: [
         MemberAvatar(
-          hue: member!.avatarHue,
-          initial: member!.name.isNotEmpty ? member!.name[0] : '?',
-          size: 64,
+          hue: member?.avatarHue ?? 162,
+          initial: member?.name.isNotEmpty == true ? member!.name[0] : '?',
+          size: 72,
           ring: true,
           ringColor: Colors.white,
           ringWidth: 2.5,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Text(
-          'Halo, ${member!.name}',
+          member != null ? 'Halo, ${member!.name}' : 'DuitKita',
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 17,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 6),
         Text(
-          'Masukkan PIN kamu',
+          checking ? 'Memverifikasi...' : 'Masukkan PIN kamu',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13.5,
             fontWeight: FontWeight.w500,
-            color: Colors.white.withValues(alpha: 0.78),
+            color: Colors.white.withValues(alpha: 0.75),
           ),
         ),
       ],
