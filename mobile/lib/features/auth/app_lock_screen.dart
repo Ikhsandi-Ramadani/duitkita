@@ -18,10 +18,42 @@ class AppLockScreen extends ConsumerStatefulWidget {
 class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   final List<String> _digits = [];
   bool _checking = false;
+  bool _hasPinSetup = false;
+  bool _loadingPinCheck = true;
   final _localAuth = LocalAuthentication();
 
   @override
+  void initState() {
+    super.initState();
+    _checkPinSetup();
+  }
+
+  Future<void> _checkPinSetup() async {
+    try {
+      // Try verifying a dummy PIN — if user has no PIN, backend throws/returns false
+      // Instead check via /me endpoint if user has pin set
+      final me = await ref.read(apiClientProvider).me();
+      final hasPin = me['has_pin'] == true;
+      if (!mounted) return;
+      if (!hasPin) {
+        context.go('/home');
+        return;
+      }
+      setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+    } catch (_) {
+      // Network error or no PIN — skip lock
+      if (mounted) context.go('/home');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loadingPinCheck) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF036249),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
     final membersAsync = ref.watch(membersProvider);
     final userIdAsync = ref.watch(currentUserIdProvider);
     final sessionRepo = ref.watch(sessionRepoProvider);
