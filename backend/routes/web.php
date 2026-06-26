@@ -1,7 +1,29 @@
 <?php
 
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\HouseholdController;
+use App\Http\Controllers\Admin\TransactionController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return redirect('/admin/login');
+Route::get('/', fn () => redirect('/admin/login'));
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Guest
+    Route::middleware('guest')->group(function () {
+        Route::get('login', [AuthController::class, 'showLogin'])->name('login');
+        Route::post('login', [AuthController::class, 'login']);
+    });
+
+    // Authenticated
+    Route::middleware('auth')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('households', [HouseholdController::class, 'index'])->name('households.index');
+        Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    });
 });
