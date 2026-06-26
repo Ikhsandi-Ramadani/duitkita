@@ -603,15 +603,23 @@ class _AddWalletSheetState extends ConsumerState<_AddWalletSheet> {
 
     final name = _nameCtrl.text.trim();
     final balance = _parsedBalance;
-    final now = DateTime.now();
-
-    // Generate a simple id from timestamp
-    final id = now.millisecondsSinceEpoch % 2147483647;
 
     try {
+      // Call API first — use server-assigned id
+      final api = ref.read(apiClientProvider);
+      final result = await api.createWallet({
+        'name': name,
+        'type': _type,
+        'scope': _scope,
+        'initial_balance': balance,
+        'current_balance': balance,
+      });
+
+      final serverId = (result['data']?['id'] ?? result['id']) as int;
+
       await ref.read(walletRepoProvider).upsert(
             WalletsCompanion(
-              id: Value(id),
+              id: Value(serverId),
               scope: Value(_scope),
               ownerUserId: _scope == 'personal'
                   ? Value(widget.userId)

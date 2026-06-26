@@ -29,4 +29,8 @@ class CategoryRepository {
       }
     });
   }
+
+  Future<void> deleteById(int id) async {
+    await (_db.delete(_db.categories)..where((t) => t.id.equals(id))).go();
+  }
 }

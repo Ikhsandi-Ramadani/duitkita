@@ -28,4 +28,8 @@ class BudgetRepository {
       }
     });
   }
+
+  Future<int> delete(int id) {
+    return (_db.delete(_db.budgets)..where((t) => t.id.equals(id))).go();
+  }
 }

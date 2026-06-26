@@ -114,6 +114,52 @@ class _BudgetBodyState extends State<_BudgetBody> {
     if (mounted) setState(() { _catTotals = totals; _loading = false; });
   }
 
+  Future<bool?> _confirmDelete(BuildContext context, Budget budget) {
+    final colors = context.appColors;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Anggaran',
+          style: AppText.sectionTitle(color: colors.text),
+        ),
+        content: Text(
+          'Hapus anggaran ini?',
+          style: AppText.label(color: colors.text2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Batal', style: TextStyle(color: colors.text2)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Hapus',
+              style: TextStyle(color: colors.expense, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteBudget(Budget budget) async {
+    final repo = widget.ref.read(budgetRepoProvider);
+    final api = widget.ref.read(apiClientProvider);
+    try {
+      await api.deleteBudget(budget.id);
+    } catch (_) {
+      // Silently continue — delete locally even if API fails (offline-first)
+    }
+    await repo.delete(budget.id);
+    if (mounted) {
+      AppToast.show(context, 'Anggaran dihapus');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -242,67 +288,103 @@ class _BudgetBodyState extends State<_BudgetBody> {
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF142818).withValues(alpha: 0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+              child: Dismissible(
+                key: ValueKey(budget.id),
+                direction: DismissDirection.endToStart,
+                confirmDismiss: (_) async {
+                  final confirmed = await _confirmDelete(context, budget);
+                  if (confirmed == true) {
+                    await _deleteBudget(budget);
+                    return true;
+                  }
+                  return false;
+                },
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    color: colors.expense,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+                      SizedBox(height: 4),
+                      Text('Hapus', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    if (cat != null)
-                      CatIcon(iconKey: cat.icon, hue: cat.hue, size: 40)
-                    else
-                      const SizedBox(width: 40),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                child: GestureDetector(
+                  onLongPress: () async {
+                    final confirmed = await _confirmDelete(context, budget);
+                    if (confirmed == true) {
+                      await _deleteBudget(budget);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: colors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF142818).withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        if (cat != null)
+                          CatIcon(iconKey: cat.icon, hue: cat.hue, size: 40)
+                        else
+                          const SizedBox(width: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  cat?.name ?? 'Kategori #${budget.categoryId}',
-                                  style: AppText.cardTitle(color: colors.text),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      cat?.name ?? 'Kategori #${budget.categoryId}',
+                                      style: AppText.cardTitle(color: colors.text),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$pct%',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isOver ? colors.expense : colors.text2,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 4),
                               Text(
-                                '$pct%',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: isOver ? colors.expense : colors.text2,
-                                ),
+                                '${fmtRp(spent)} / ${fmtRp(budget.amount)}',
+                                style: AppText.label(color: colors.text2),
+                              ),
+                              const SizedBox(height: 8),
+                              AppProgressBar(
+                                fraction: fraction,
+                                height: 5,
+                                normalColor: colors.primary,
+                                overColor: colors.expense,
+                                radius: 3,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${fmtRp(spent)} / ${fmtRp(budget.amount)}',
-                            style: AppText.label(color: colors.text2),
-                          ),
-                          const SizedBox(height: 8),
-                          AppProgressBar(
-                            fraction: fraction,
-                            height: 5,
-                            normalColor: colors.primary,
-                            overColor: colors.expense,
-                            radius: 3,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             );

@@ -23,6 +23,7 @@ import '../../features/transactions/transaction_detail_screen.dart';
 import '../../features/wallets/wallet_detail_screen.dart';
 import '../../features/goals/goal_detail_screen.dart';
 import '../../features/debts/debt_detail_screen.dart';
+import '../../features/categories/categories_screen.dart';
 
 // Router provider so we can inject Riverpod for the redirect guard.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -147,6 +148,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/categories',
+        builder: (context, state) => const CategoriesScreen(),
       ),
 
       // Detail routes (pushed, no bottom nav)

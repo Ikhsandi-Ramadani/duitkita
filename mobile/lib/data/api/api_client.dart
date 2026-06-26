@@ -134,6 +134,39 @@ class ApiClient {
   }
 
   // -------------------------------------------------------------------------
+  // Budget endpoints
+  // -------------------------------------------------------------------------
+
+  Future<void> deleteBudget(int id) async {
+    await _dio.delete('/budgets/$id');
+  }
+
+  // -------------------------------------------------------------------------
+  // Category endpoints
+  // -------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    final res = await _dio.get('/categories');
+    final list = res.data as List? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createCategory(Map<String, dynamic> body) async {
+    final res = await _dio.post('/categories', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateCategory(
+      int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/categories/$id', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> deleteCategory(int id) async {
+    await _dio.delete('/categories/$id');
+  }
+
+  // -------------------------------------------------------------------------
   // Household member endpoints
   // -------------------------------------------------------------------------
 
@@ -172,6 +205,25 @@ class ApiClient {
       data: {'splits': splits},
     );
     return (res.data['splits'] as List).cast<Map<String, dynamic>>();
+  }
+
+  // -------------------------------------------------------------------------
+  // Wallet CRUD
+  // -------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> createWallet(Map<String, dynamic> body) async {
+    final res = await _dio.post('/wallets', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateWallet(
+      int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/wallets/$id', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> deleteWallet(int id) async {
+    await _dio.delete('/wallets/$id');
   }
 
   // -------------------------------------------------------------------------

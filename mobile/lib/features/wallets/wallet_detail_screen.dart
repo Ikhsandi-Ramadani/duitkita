@@ -192,6 +192,11 @@ class _WalletDetailBody extends ConsumerWidget {
       child: _DeleteConfirmSheet(wallet: wallet),
     ).then((confirmed) async {
       if (confirmed == true) {
+        try {
+          await ref.read(apiClientProvider).deleteWallet(wallet.id);
+        } catch (_) {
+          // If the API call fails, still soft-delete locally
+        }
         await ref.read(walletRepoProvider).upsert(
               WalletsCompanion(
                 id: Value(wallet.id),
@@ -650,15 +655,26 @@ class _EditNameSheetState extends ConsumerState<_EditNameSheet> {
     final name = _ctrl.text.trim();
     if (name.isEmpty || _saving) return;
     setState(() => _saving = true);
-    await ref.read(walletRepoProvider).upsert(
-          WalletsCompanion(
-            id: Value(widget.wallet.id),
-            name: Value(name),
-          ),
-        );
-    if (mounted) {
-      Navigator.of(context).pop();
-      AppToast.show(context, 'Nama dompet diperbarui');
+    try {
+      await ref.read(apiClientProvider).updateWallet(
+        widget.wallet.id,
+        {'name': name},
+      );
+      await ref.read(walletRepoProvider).upsert(
+            WalletsCompanion(
+              id: Value(widget.wallet.id),
+              name: Value(name),
+            ),
+          );
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppToast.show(context, 'Nama dompet diperbarui');
+      }
+    } catch (_) {
+      if (mounted) {
+        AppToast.show(context, 'Gagal memperbarui dompet', success: false);
+        setState(() => _saving = false);
+      }
     }
   }
 

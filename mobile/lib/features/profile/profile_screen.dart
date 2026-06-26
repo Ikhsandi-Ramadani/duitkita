@@ -139,14 +139,12 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsTile(
                           icon: Icons.category_outlined,
                           label: 'Kelola kategori',
-                          onTap: () => AppToast.show(
-                              context, 'Segera hadir'),
+                          onTap: () => context.push('/categories'),
                         ),
                         _SettingsTile(
                           icon: Icons.account_balance_wallet_outlined,
                           label: 'Kelola dompet',
-                          onTap: () => AppToast.show(
-                              context, 'Segera hadir'),
+                          onTap: () => context.push('/wallets'),
                         ),
                       ]),
                     ),
