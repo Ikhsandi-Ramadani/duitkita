@@ -1,0 +1,114 @@
+name: Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version name (e.g. 1.1.0)'
+        required: true
+      build_number:
+        description: 'Build number (integer, increment from last)'
+        required: true
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: 'Bug fixes and improvements'
+      force_update:
+        description: 'Force update (users cannot skip)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: stable
+          cache: true
+
+      - name: Update pubspec version
+        working-directory: mobile
+        run: |
+          sed -i "s/^version: .*/version: ${{ github.event.inputs.version }}+${{ github.event.inputs.build_number }}/" pubspec.yaml
+          echo "Updated version to ${{ github.event.inputs.version }}+${{ github.event.inputs.build_number }}"
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build Release APK
+        working-directory: mobile
+        run: |
+          flutter build apk \
+            --release \
+            --split-per-abi \
+            --dart-define=API_BASE_URL=https://duitkita.ikhsandi.web.id/api
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: DuitKita v${{ github.event.inputs.version }}
+          body: |
+            ## DuitKita v${{ github.event.inputs.version }}
+
+            ${{ github.event.inputs.release_notes }}
+
+            ### Download
+            - **arm64-v8a** (HP modern, direkomendasikan)
+            - **armeabi-v7a** (HP lama)
+            - **x86_64** (emulator)
+          files: |
+            mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            mobile/build/app/outputs/flutter-apk/app-x86_64-release.apk
+          draft: false
+          prerelease: false
+
+      - name: Update VersionController on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/duitkita
+            git pull
+            cat > app/Http/Controllers/Api/VersionController.php << 'PHPEOF'
+            <?php
+            namespace App\Http\Controllers\Api;
+            use App\Http\Controllers\Controller;
+            use Illuminate\Http\JsonResponse;
+
+            class VersionController extends Controller
+            {
+                public function index(): JsonResponse
+                {
+                    return response()->json([
+                        'version' => '${{ github.event.inputs.version }}',
+                        'build'   => ${{ github.event.inputs.build_number }},
+                        'url'     => 'https://github.com/Ikhsandi-Ramadani/duitkita/releases/download/v${{ github.event.inputs.version }}/app-arm64-v8a-release.apk',
+                        'notes'   => '${{ github.event.inputs.release_notes }}',
+                        'force'   => ${{ github.event.inputs.force_update }},
+                    ]);
+                }
+            }
+            PHPEOF
+            php artisan config:cache
+            php artisan route:cache
