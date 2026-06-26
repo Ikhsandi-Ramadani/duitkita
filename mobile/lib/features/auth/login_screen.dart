@@ -202,14 +202,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final serverMsg = e.response?.data is Map
           ? (e.response!.data['message'] as String?)
           : null;
+      final debugInfo = '[${e.type.name}] ${e.response?.statusCode ?? ''} '
+          '${e.response?.data ?? e.message}';
       setState(() {
         _loading = false;
-        _error = serverMsg ?? 'Gagal terhubung ke server. Coba lagi atau gunakan mode demo.';
+        _error = serverMsg ?? 'Error: $debugInfo';
       });
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Terjadi kesalahan. Coba lagi.';
+        _error = 'Error: $e';
       });
     }
   }
