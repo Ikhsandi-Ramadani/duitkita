@@ -32,12 +32,42 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   String _search = '';
   String? _typeFilter; // null = Semua
   int? _memberFilter; // null = Semua
+  String? _monthFilter; // null = all time, 'YYYY-MM' = specific month
   final _searchCtrl = TextEditingController();
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // -------------------------------------------------------------------------
+  // Month helpers
+  // -------------------------------------------------------------------------
+
+  String _formatMonth(String ym) {
+    final parts = ym.split('-');
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    return '${months[int.parse(parts[1]) - 1]} ${parts[0]}';
+  }
+
+  Future<void> _pickMonth() async {
+    final now = DateTime.now();
+    final months = List.generate(12, (i) {
+      final d = DateTime(now.year, now.month - i);
+      return '${d.year}-${d.month.toString().padLeft(2, '0')}';
+    });
+
+    final picked = await AppSheet.show<String?>(
+      context: context,
+      child: _MonthPickerSheet(months: months, selected: _monthFilter),
+    );
+    if (mounted) {
+      setState(() => _monthFilter = (picked == null || picked == '') ? null : picked);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -72,6 +102,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       type: _typeFilter,
       memberId: _memberFilter,
       search: _search.isEmpty ? null : _search,
+      month: _monthFilter,
     );
 
     final grouped = ref.watch(txGroupedProvider(filters));
@@ -161,6 +192,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     colors: colors,
                     onTap: _pickMember,
                   ),
+                  const SizedBox(width: 6),
+                  _FilterChip(
+                    label: _monthFilter == null
+                        ? 'Semua Bulan'
+                        : _formatMonth(_monthFilter!),
+                    active: _monthFilter != null,
+                    activeColor: colors.primary,
+                    colors: colors,
+                    onTap: _pickMonth,
+                  ),
                 ],
               ),
             ),
@@ -175,7 +216,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     return const EmptyState(
                       icon: Icons.receipt_long_outlined,
                       title: 'Belum ada transaksi',
-                      sub: 'Tap + untuk mencatat transaksi pertama kamu.',
+                      sub: 'Tambah transaksi pertamamu',
                     );
                   }
 
@@ -544,6 +585,86 @@ class _MemberFilterSheet extends StatelessWidget {
                 ? Icon(Icons.check_rounded, color: colors.primary)
                 : null,
             onTap: () => Navigator.of(context).pop(m.id),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Month picker sheet
+// ---------------------------------------------------------------------------
+
+class _MonthPickerSheet extends StatelessWidget {
+  const _MonthPickerSheet({
+    required this.months,
+    required this.selected,
+  });
+
+  final List<String> months;
+  final String? selected;
+
+  String _label(String ym) {
+    final parts = ym.split('-');
+    const names = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    return '${names[int.parse(parts[1]) - 1]} ${parts[0]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: Text('Filter Bulan',
+              style: AppText.cardTitle(color: colors.text)),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colors.surface2,
+              shape: BoxShape.circle,
+            ),
+            child:
+                Icon(Icons.calendar_today_outlined, color: colors.text3, size: 18),
+          ),
+          title:
+              Text('Semua Bulan', style: AppText.body(color: colors.text)),
+          trailing: selected == null
+              ? Icon(Icons.check_rounded, color: colors.primary)
+              : null,
+          onTap: () => Navigator.of(context).pop(''),
+        ),
+        ...months.map(
+          (ym) => ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: colors.surface2,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.calendar_month_outlined,
+                  color: colors.text3, size: 18),
+            ),
+            title: Text(_label(ym), style: AppText.body(color: colors.text)),
+            trailing: selected == ym
+                ? Icon(Icons.check_rounded, color: colors.primary)
+                : null,
+            onTap: () => Navigator.of(context).pop(ym),
           ),
         ),
         const SizedBox(height: 16),

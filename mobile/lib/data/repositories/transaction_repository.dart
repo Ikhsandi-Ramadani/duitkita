@@ -18,6 +18,21 @@ class TransactionFilters {
   final String? search;
   final int? walletId;
   final String? month; // 'YYYY-MM'
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TransactionFilters &&
+          runtimeType == other.runtimeType &&
+          type == other.type &&
+          memberId == other.memberId &&
+          search == other.search &&
+          walletId == other.walletId &&
+          month == other.month;
+
+  @override
+  int get hashCode =>
+      Object.hash(type, memberId, search, walletId, month);
 }
 
 class MonthlyTotal {
