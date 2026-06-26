@@ -4,12 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -18,16 +18,16 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string $navigationIcon = 'heroicon-o-users';
+    protected static $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $navigationLabel = 'Users';
 
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -58,7 +58,6 @@ class UserResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'owner'  => 'warning',
-                        'member' => 'gray',
                         default  => 'gray',
                     }),
                 TextColumn::make('household.name')
@@ -78,11 +77,10 @@ class UserResource extends Resource
                         'member' => 'Member',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([]);
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+            ]);
     }
 
     public static function getRelations(): array
@@ -93,9 +91,9 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListUsers::route('/'),
-            'view'   => Pages\ViewUser::route('/{record}'),
-            'edit'   => Pages\EditUser::route('/{record}/edit'),
+            'index' => Pages\ListUsers::route('/'),
+            'view'  => Pages\ViewUser::route('/{record}'),
+            'edit'  => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 

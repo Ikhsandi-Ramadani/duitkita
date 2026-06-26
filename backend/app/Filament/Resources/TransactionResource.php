@@ -4,9 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Models\Transaction;
-use Filament\Forms\Form;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -17,15 +17,15 @@ class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
 
-    protected static string $navigationIcon = 'heroicon-o-arrows-right-left';
+    protected static $navigationIcon = 'heroicon-o-arrows-right-left';
 
     protected static ?string $navigationLabel = 'Transactions';
 
     protected static ?int $navigationSort = 3;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->components([]);
     }
 
     public static function table(Table $table): Table
@@ -90,10 +90,9 @@ class TransactionResource extends Resource
                             );
                     }),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
-            ->bulkActions([]);
+            ->recordActions([
+                ViewAction::make(),
+            ]);
     }
 
     public static function getRelations(): array

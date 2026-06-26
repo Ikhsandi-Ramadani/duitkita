@@ -4,9 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\HouseholdResource\Pages;
 use App\Models\Household;
-use Filament\Forms\Form;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -14,15 +14,15 @@ class HouseholdResource extends Resource
 {
     protected static ?string $model = Household::class;
 
-    protected static string $navigationIcon = 'heroicon-o-home-modern';
+    protected static $navigationIcon = 'heroicon-o-home-modern';
 
     protected static ?string $navigationLabel = 'Households';
 
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->components([]);
     }
 
     public static function table(Table $table): Table
@@ -49,11 +49,9 @@ class HouseholdResource extends Resource
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->filters([])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
-            ->bulkActions([]);
+            ->recordActions([
+                ViewAction::make(),
+            ]);
     }
 
     public static function getRelations(): array
