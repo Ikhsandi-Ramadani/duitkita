@@ -16,7 +16,7 @@ class SuperAdminSeeder extends Seeder
                 'password'       => bcrypt('admin123'),
                 'is_super_admin' => true,
                 'household_id'   => null,
-                'role'           => null,
+                'role'           => 'member',
             ]
         );
     }
