@@ -114,15 +114,33 @@
                 <slot />
             </main>
         </div>
+
+        <Toast position="top-right" />
     </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePage, router, Link } from '@inertiajs/vue3'
+import Toast from 'primevue/toast'
+import { useToast } from 'primevue/usetoast'
 
 const page = usePage()
 const auth = computed(() => page.props.auth)
+const toast = useToast()
+
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) {
+            toast.add({ severity: 'success', summary: 'Berhasil', detail: flash.success, life: 3000 })
+        }
+        if (flash?.error) {
+            toast.add({ severity: 'error', summary: 'Gagal', detail: flash.error, life: 4000 })
+        }
+    },
+    { immediate: false }
+)
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -150,6 +168,16 @@ const navItems = [
         href: '/admin/transactions',
         label: 'Transaksi',
         iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />',
+    },
+    {
+        href: '/admin/wallets',
+        label: 'Wallets',
+        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />',
+    },
+    {
+        href: '/admin/budgets',
+        label: 'Budgets',
+        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />',
     },
 ]
 

@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BudgetController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HouseholdController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect('/admin/login'));
@@ -25,7 +27,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('households', [HouseholdController::class, 'index'])->name('households.index');
@@ -35,5 +39,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
         Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+
+        Route::get('wallets', [WalletController::class, 'index'])->name('wallets.index');
+        Route::put('wallets/{wallet}', [WalletController::class, 'update'])->name('wallets.update');
+        Route::delete('wallets/{wallet}', [WalletController::class, 'destroy'])->name('wallets.destroy');
+
+        Route::get('budgets', [BudgetController::class, 'index'])->name('budgets.index');
+        Route::post('budgets', [BudgetController::class, 'store'])->name('budgets.store');
+        Route::put('budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
+        Route::delete('budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
     });
 });

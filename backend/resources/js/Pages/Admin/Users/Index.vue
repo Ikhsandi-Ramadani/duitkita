@@ -72,22 +72,47 @@
                         <span class="text-slate-400 text-sm">{{ formatDate(data.created_at) }}</span>
                     </template>
                 </Column>
-                <Column header="Aksi" style="width: 100px;">
+                <Column>
                     <template #header>
                         <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Aksi</span>
                     </template>
                     <template #body="{ data }">
                         <div class="flex items-center gap-1.5">
+                            <!-- Lihat Detail -->
+                            <button
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                                title="Lihat Detail"
+                                @click="router.visit(`/admin/users/${data.id}`)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                            <!-- Edit -->
                             <button
                                 class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="Edit"
                                 @click="openEdit(data)"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                             </button>
+                            <!-- Reset Password -->
+                            <button
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                title="Reset Password"
+                                @click="openResetPassword(data)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                            </button>
+                            <!-- Hapus -->
                             <button
                                 class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Hapus"
                                 @click="openDelete(data)"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -182,6 +207,48 @@
                 <Button label="Hapus" severity="danger" :loading="deleting" @click="submitDelete" />
             </template>
         </Dialog>
+
+        <!-- Reset Password Dialog -->
+        <Dialog
+            v-model:visible="resetPasswordVisible"
+            header="Reset Password"
+            :style="{ width: '420px' }"
+            :modal="true"
+        >
+            <div class="space-y-4 pt-2">
+                <p class="text-slate-500 text-sm">
+                    Reset password untuk pengguna <strong class="text-slate-800">{{ resetTarget?.name }}</strong>.
+                </p>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-slate-700">Password Baru <span class="text-red-500">*</span></label>
+                    <Password
+                        v-model="resetForm.password"
+                        class="w-full"
+                        :feedback="true"
+                        toggle-mask
+                        input-class="w-full"
+                        :invalid="!!resetErrors.password"
+                    />
+                    <small v-if="resetErrors.password" class="text-red-500 text-xs">{{ resetErrors.password }}</small>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-medium text-slate-700">Konfirmasi Password</label>
+                    <Password
+                        v-model="resetForm.password_confirmation"
+                        class="w-full"
+                        :feedback="false"
+                        toggle-mask
+                        input-class="w-full"
+                        :invalid="!!resetErrors.password_confirmation"
+                    />
+                    <small v-if="resetErrors.password_confirmation" class="text-red-500 text-xs">{{ resetErrors.password_confirmation }}</small>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Batal" severity="secondary" outlined @click="resetPasswordVisible = false" />
+                <Button label="Reset Password" severity="warning" :loading="resetting" @click="submitResetPassword" />
+            </template>
+        </Dialog>
     </Layout>
 </template>
 
@@ -195,6 +262,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import Password from 'primevue/password'
 
 const props = defineProps({
     users: Object,
@@ -247,6 +315,34 @@ function submitDelete() {
         preserveScroll: true,
         onSuccess: () => { deleteVisible.value = false },
         onFinish: () => { deleting.value = false },
+    })
+}
+
+// Reset Password
+const resetPasswordVisible = ref(false)
+const resetting = ref(false)
+const resetTarget = ref(null)
+const resetErrors = reactive({})
+const resetForm = reactive({ password: '', password_confirmation: '' })
+
+function openResetPassword(user) {
+    resetTarget.value = user
+    resetForm.password = ''
+    resetForm.password_confirmation = ''
+    Object.keys(resetErrors).forEach(k => delete resetErrors[k])
+    resetPasswordVisible.value = true
+}
+
+function submitResetPassword() {
+    resetting.value = true
+    router.put(`/admin/users/${resetTarget.value.id}/reset-password`, {
+        password: resetForm.password,
+        password_confirmation: resetForm.password_confirmation,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { resetPasswordVisible.value = false },
+        onError: errs => Object.assign(resetErrors, errs),
+        onFinish: () => { resetting.value = false },
     })
 }
 
