@@ -1,50 +1,55 @@
 <template>
     <Layout>
-        <div class="bg-[#1e293b] rounded-2xl border border-slate-700 overflow-hidden">
-            <!-- Header + Filters -->
-            <div class="px-6 py-4 border-b border-slate-700 space-y-3">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-white font-semibold text-lg">Transaksi</h2>
-                    <span class="text-slate-400 text-sm">{{ transactions.total }} total</span>
-                </div>
+        <!-- Filter Bar -->
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-5 py-4 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <Select
+                    v-model="filters.type"
+                    :options="typeOptions"
+                    option-label="label"
+                    option-value="value"
+                    placeholder="Semua Tipe"
+                    show-clear
+                    class="w-44"
+                    @change="applyFilters"
+                />
+                <DatePicker
+                    v-model="filters.from"
+                    placeholder="Dari tanggal"
+                    date-format="yy-mm-dd"
+                    show-button-bar
+                    class="w-44"
+                    @date-select="applyFilters"
+                    @clear-click="applyFilters"
+                />
+                <DatePicker
+                    v-model="filters.until"
+                    placeholder="Sampai tanggal"
+                    date-format="yy-mm-dd"
+                    show-button-bar
+                    class="w-44"
+                    @date-select="applyFilters"
+                    @clear-click="applyFilters"
+                />
+                <button
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                    @click="resetFilters"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Reset
+                </button>
+            </div>
+        </div>
 
-                <!-- Filter Toolbar -->
-                <div class="flex flex-wrap gap-3">
-                    <Select
-                        v-model="filters.type"
-                        :options="typeOptions"
-                        option-label="label"
-                        option-value="value"
-                        placeholder="Semua Tipe"
-                        show-clear
-                        class="w-44"
-                        @change="applyFilters"
-                    />
-                    <DatePicker
-                        v-model="filters.from"
-                        placeholder="Dari tanggal"
-                        date-format="yy-mm-dd"
-                        show-button-bar
-                        class="w-44"
-                        @date-select="applyFilters"
-                        @clear-click="applyFilters"
-                    />
-                    <DatePicker
-                        v-model="filters.until"
-                        placeholder="Sampai tanggal"
-                        date-format="yy-mm-dd"
-                        show-button-bar
-                        class="w-44"
-                        @date-select="applyFilters"
-                        @clear-click="applyFilters"
-                    />
-                    <Button
-                        label="Reset"
-                        severity="secondary"
-                        size="small"
-                        outlined
-                        @click="resetFilters"
-                    />
+        <!-- Table Card -->
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <div>
+                    <h2 class="text-slate-800 font-semibold text-base">Transaksi</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">{{ transactions.total }} total transaksi</p>
                 </div>
             </div>
 
@@ -53,49 +58,79 @@
                 :value="transactions.data"
                 data-key="id"
                 class="p-datatable-sm"
-                striped-rows
             >
                 <Column header="Catatan">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Catatan</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-200 text-sm">{{ data.note ?? '-' }}</span>
+                        <span class="text-slate-700 text-sm">{{ data.note ?? '-' }}</span>
                     </template>
                 </Column>
                 <Column header="Jumlah">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Jumlah</span>
+                    </template>
                     <template #body="{ data }">
                         <span
                             :class="[
                                 'font-semibold text-sm',
-                                data.type === 'income' ? 'text-green-400' : 'text-red-400',
+                                data.type === 'income' ? 'text-green-600' : 'text-red-500',
                             ]"
                         >
-                            {{ formatRupiah(data.amount) }}
+                            {{ data.type === 'income' ? '+' : '-' }}{{ formatRupiah(data.amount) }}
                         </span>
                     </template>
                 </Column>
                 <Column header="Tipe">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Tipe</span>
+                    </template>
                     <template #body="{ data }">
-                        <Tag
-                            :value="typeLabel(data.type)"
-                            :severity="typeSeverity(data.type)"
-                        />
+                        <span
+                            :class="[
+                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                data.type === 'income'
+                                    ? 'bg-green-100 text-green-700'
+                                    : data.type === 'expense'
+                                        ? 'bg-red-100 text-red-600'
+                                        : data.type === 'transfer'
+                                            ? 'bg-blue-100 text-blue-600'
+                                            : 'bg-slate-100 text-slate-600',
+                            ]"
+                        >
+                            {{ typeLabel(data.type) }}
+                        </span>
                     </template>
                 </Column>
                 <Column header="Kategori">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Kategori</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-300 text-sm">{{ data.category?.name ?? '-' }}</span>
+                        <span class="text-slate-600 text-sm">{{ data.category?.name ?? '-' }}</span>
                     </template>
                 </Column>
                 <Column header="Dompet">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dompet</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-300 text-sm">{{ data.wallet?.name ?? '-' }}</span>
+                        <span class="text-slate-600 text-sm">{{ data.wallet?.name ?? '-' }}</span>
                     </template>
                 </Column>
                 <Column header="Dicatat Oleh">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dicatat Oleh</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-300 text-sm">{{ data.recorder?.name ?? '-' }}</span>
+                        <span class="text-slate-600 text-sm">{{ data.recorder?.name ?? '-' }}</span>
                     </template>
                 </Column>
                 <Column header="Tanggal">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Tanggal</span>
+                    </template>
                     <template #body="{ data }">
                         <span class="text-slate-400 text-sm">{{ formatDate(data.date ?? data.created_at) }}</span>
                     </template>
@@ -103,28 +138,31 @@
             </DataTable>
 
             <!-- Pagination -->
-            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-700">
-                <span class="text-slate-400 text-sm">
+            <div class="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+                <span class="text-slate-400 text-xs">
                     Halaman {{ transactions.current_page }} dari {{ transactions.last_page }}
                 </span>
-                <div class="flex gap-2">
-                    <Button
-                        label="Sebelumnya"
-                        icon="pi pi-chevron-left"
-                        severity="secondary"
-                        size="small"
+                <div class="flex gap-1.5">
+                    <button
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         :disabled="!transactions.prev_page_url"
                         @click="router.visit(transactions.prev_page_url)"
-                    />
-                    <Button
-                        label="Berikutnya"
-                        icon="pi pi-chevron-right"
-                        icon-pos="right"
-                        severity="secondary"
-                        size="small"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Sebelumnya
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         :disabled="!transactions.next_page_url"
                         @click="router.visit(transactions.next_page_url)"
-                    />
+                    >
+                        Berikutnya
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -133,12 +171,10 @@
 
 <script setup>
 import { reactive } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { router } from '@inertiajs/vue3'
 import Layout from '../Layout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
@@ -146,15 +182,12 @@ defineProps({
     transactions: Object,
 })
 
-const page = usePage()
-
 const typeOptions = [
     { label: 'Pemasukan', value: 'income' },
     { label: 'Pengeluaran', value: 'expense' },
     { label: 'Transfer', value: 'transfer' },
 ]
 
-// Init filters from current URL query params
 const params = new URLSearchParams(window.location.search)
 const filters = reactive({
     type: params.get('type') ?? null,
@@ -201,10 +234,5 @@ function formatDate(dateStr) {
 function typeLabel(type) {
     const map = { income: 'Pemasukan', expense: 'Pengeluaran', transfer: 'Transfer', adjustment: 'Penyesuaian' }
     return map[type] ?? type
-}
-
-function typeSeverity(type) {
-    const map = { income: 'success', expense: 'danger', transfer: 'info', adjustment: 'secondary' }
-    return map[type] ?? 'secondary'
 }
 </script>

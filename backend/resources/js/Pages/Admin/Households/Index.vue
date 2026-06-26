@@ -1,10 +1,12 @@
 <template>
     <Layout>
-        <div class="bg-[#1e293b] rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-                <h2 class="text-white font-semibold text-lg">Keluarga</h2>
-                <span class="text-slate-400 text-sm">{{ households.total }} total</span>
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <div>
+                    <h2 class="text-slate-800 font-semibold text-base">Keluarga</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">{{ households.total }} total keluarga terdaftar</p>
+                </div>
             </div>
 
             <!-- Table -->
@@ -12,27 +14,57 @@
                 :value="households.data"
                 data-key="id"
                 class="p-datatable-sm"
-                striped-rows
             >
-                <Column field="name" header="Nama Keluarga" />
-                <Column header="Pemilik">
+                <Column field="name" header="Nama Keluarga">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Nama Keluarga</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-300">{{ data.owner?.name ?? '-' }}</span>
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                            </div>
+                            <span class="text-slate-800 text-sm font-medium">{{ data.name }}</span>
+                        </div>
+                    </template>
+                </Column>
+                <Column header="Pemilik">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Pemilik</span>
+                    </template>
+                    <template #body="{ data }">
+                        <span class="text-slate-600 text-sm">{{ data.owner?.name ?? '-' }}</span>
                     </template>
                 </Column>
                 <Column header="Kode Undang">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Kode Undang</span>
+                    </template>
                     <template #body="{ data }">
-                        <code class="font-mono text-xs bg-slate-700 text-amber-300 px-2 py-1 rounded">
+                        <code class="font-mono text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded">
                             {{ data.invite_code ?? '-' }}
                         </code>
                     </template>
                 </Column>
                 <Column header="Anggota">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Anggota</span>
+                    </template>
                     <template #body="{ data }">
-                        <span class="text-slate-300">{{ data.members_count }} orang</span>
+                        <span class="inline-flex items-center gap-1 text-slate-600 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {{ data.members_count }} orang
+                        </span>
                     </template>
                 </Column>
                 <Column header="Dibuat">
+                    <template #header>
+                        <span class="text-slate-500 text-xs font-semibold uppercase tracking-wide">Dibuat</span>
+                    </template>
                     <template #body="{ data }">
                         <span class="text-slate-400 text-sm">{{ formatDate(data.created_at) }}</span>
                     </template>
@@ -40,28 +72,31 @@
             </DataTable>
 
             <!-- Pagination -->
-            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-700">
-                <span class="text-slate-400 text-sm">
+            <div class="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+                <span class="text-slate-400 text-xs">
                     Halaman {{ households.current_page }} dari {{ households.last_page }}
                 </span>
-                <div class="flex gap-2">
-                    <Button
-                        label="Sebelumnya"
-                        icon="pi pi-chevron-left"
-                        severity="secondary"
-                        size="small"
+                <div class="flex gap-1.5">
+                    <button
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         :disabled="!households.prev_page_url"
                         @click="router.visit(households.prev_page_url)"
-                    />
-                    <Button
-                        label="Berikutnya"
-                        icon="pi pi-chevron-right"
-                        icon-pos="right"
-                        severity="secondary"
-                        size="small"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Sebelumnya
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         :disabled="!households.next_page_url"
                         @click="router.visit(households.next_page_url)"
-                    />
+                    >
+                        Berikutnya
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -73,7 +108,6 @@ import { router } from '@inertiajs/vue3'
 import Layout from '../Layout.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Button from 'primevue/button'
 
 defineProps({
     households: Object,

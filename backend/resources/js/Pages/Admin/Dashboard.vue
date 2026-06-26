@@ -2,47 +2,85 @@
     <Layout>
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-            <StatCard
-                label="Total Pengguna"
-                :value="stats.total_users"
-                icon="pi-users"
-                color="text-blue-400"
-                bg="bg-blue-500/10"
-            />
-            <StatCard
-                label="Total Keluarga"
-                :value="stats.total_households"
-                icon="pi-building"
-                color="text-purple-400"
-                bg="bg-purple-500/10"
-            />
-            <StatCard
-                label="Total Transaksi"
-                :value="stats.total_transactions"
-                icon="pi-receipt"
-                color="text-green-400"
-                bg="bg-green-500/10"
-            />
-            <StatCard
-                label="Total Pengeluaran"
-                :value="formatRupiah(stats.total_amount)"
-                icon="pi-wallet"
-                color="text-red-400"
-                bg="bg-red-500/10"
-                :raw="false"
-            />
-            <StatCard
-                label="Pengguna Baru Bulan Ini"
-                :value="stats.new_users_month"
-                icon="pi-user-plus"
-                color="text-amber-400"
-                bg="bg-amber-500/10"
-            />
+            <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-slate-500 text-xs mb-0.5 truncate">Total Pengguna</p>
+                    <p class="text-slate-900 text-xl font-bold truncate">{{ stats.total_users }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-slate-500 text-xs mb-0.5 truncate">Total Keluarga</p>
+                    <p class="text-slate-900 text-xl font-bold truncate">{{ stats.total_households }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-slate-500 text-xs mb-0.5 truncate">Total Transaksi</p>
+                    <p class="text-slate-900 text-xl font-bold truncate">{{ stats.total_transactions }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-slate-500 text-xs mb-0.5 truncate">Total Pengeluaran</p>
+                    <p class="text-slate-900 text-xl font-bold truncate">{{ formatRupiah(stats.total_amount) }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-slate-500 text-xs mb-0.5 truncate">Pengguna Baru Bulan Ini</p>
+                    <p class="text-slate-900 text-xl font-bold truncate">{{ stats.new_users_month }}</p>
+                </div>
+            </div>
         </div>
 
         <!-- Chart -->
-        <div class="bg-[#1e293b] rounded-2xl p-6 border border-slate-700">
-            <h3 class="text-white font-semibold mb-4">Pemasukan vs Pengeluaran (6 Bulan Terakhir)</h3>
+        <div class="bg-white rounded-xl p-6 border border-slate-100 shadow-sm">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h3 class="text-slate-800 font-semibold text-base">Pemasukan vs Pengeluaran</h3>
+                    <p class="text-slate-400 text-xs mt-0.5">6 Bulan Terakhir</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-slate-500">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                        Pemasukan
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>
+                        Pengeluaran
+                    </span>
+                </div>
+            </div>
             <div class="relative" style="height: 300px;">
                 <canvas ref="chartCanvas" />
             </div>
@@ -64,27 +102,10 @@ const props = defineProps({
 
 const chartCanvas = ref(null)
 
-// Stat card sub-component
-const StatCard = {
-    props: ['label', 'value', 'icon', 'color', 'bg', 'raw'],
-    template: `
-        <div class="bg-[#1e293b] rounded-2xl p-5 border border-slate-700 flex items-center gap-4">
-            <div :class="['w-12 h-12 rounded-xl flex items-center justify-center shrink-0', bg]">
-                <i :class="['pi', icon, 'text-xl', color]" />
-            </div>
-            <div class="min-w-0">
-                <p class="text-slate-400 text-xs mb-1 truncate">{{ label }}</p>
-                <p class="text-white text-xl font-bold truncate">{{ value }}</p>
-            </div>
-        </div>
-    `,
-}
-
 function formatRupiah(amount) {
     return 'Rp ' + Number(amount).toLocaleString('id-ID')
 }
 
-// Process chartData into labels + datasets
 const processedChart = computed(() => {
     const monthSet = new Set()
     const incomeMap = {}
@@ -114,18 +135,18 @@ onMounted(() => {
                 {
                     label: 'Pemasukan',
                     data: income,
-                    backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(22, 163, 74, 0.8)',
+                    borderColor: '#16a34a',
                     borderWidth: 1,
-                    borderRadius: 4,
+                    borderRadius: 6,
                 },
                 {
                     label: 'Pengeluaran',
                     data: expense,
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                    borderColor: '#ef4444',
                     borderWidth: 1,
-                    borderRadius: 4,
+                    borderRadius: 6,
                 },
             ],
         },
@@ -134,9 +155,13 @@ onMounted(() => {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: { color: '#94a3b8' },
+                    display: false,
                 },
                 tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleColor: '#94a3b8',
+                    bodyColor: '#f1f5f9',
+                    padding: 10,
                     callbacks: {
                         label: ctx => {
                             return ` ${ctx.dataset.label}: Rp ${Number(ctx.raw).toLocaleString('id-ID')}`
@@ -146,15 +171,18 @@ onMounted(() => {
             },
             scales: {
                 x: {
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(148,163,184,0.1)' },
+                    ticks: { color: '#94a3b8', font: { size: 12 } },
+                    grid: { color: '#f1f5f9' },
+                    border: { color: '#e2e8f0' },
                 },
                 y: {
                     ticks: {
                         color: '#94a3b8',
+                        font: { size: 11 },
                         callback: val => 'Rp ' + Number(val).toLocaleString('id-ID'),
                     },
-                    grid: { color: 'rgba(148,163,184,0.1)' },
+                    grid: { color: '#f1f5f9' },
+                    border: { color: '#e2e8f0' },
                 },
             },
         },
