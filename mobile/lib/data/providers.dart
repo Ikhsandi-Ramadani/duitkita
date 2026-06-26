@@ -25,10 +25,15 @@ final dbProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-/// Async provider that seeds the DB on first open, then returns the db.
+/// Async provider that seeds the DB only when no auth token exists (demo mode).
 final dbReadyProvider = FutureProvider<AppDatabase>((ref) async {
   final db = ref.watch(dbProvider);
-  await seedIfEmpty(db);
+  final storage = ref.watch(secureStorageProvider);
+  final token = await storage.read(key: 'auth_token');
+  if (token == null) {
+    // No token = not logged in, seed demo data for unauthenticated preview
+    await seedIfEmpty(db);
+  }
   return db;
 });
 

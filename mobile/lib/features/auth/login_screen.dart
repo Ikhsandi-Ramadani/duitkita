@@ -194,9 +194,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final sessionRepo = ref.read(sessionRepoProvider);
       final userId = data['user']?['id'] as int? ?? 1;
       await sessionRepo.setCurrentUserId(userId);
-      final inviteCode =
-          data['household']?['invite_code'] as String?;
+      final inviteCode = data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
+
+      // Pull fresh data from server before navigating
+      await ref.read(syncServiceProvider).initialPull();
+
       if (mounted) context.go('/home');
     } on DioException catch (e) {
       final serverMsg = e.response?.data is Map
