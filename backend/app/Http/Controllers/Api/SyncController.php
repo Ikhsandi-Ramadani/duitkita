@@ -12,6 +12,7 @@ use App\Models\Notification;
 use App\Models\Recurring;
 use App\Models\SavingsGoal;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Wallet;
 use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
@@ -68,6 +69,9 @@ class SyncController extends Controller
             ->where('updated_at', '>=', $sinceDate)
             ->get();
 
+        $members = User::where('household_id', $householdId)
+            ->get(['id', 'name', 'email', 'role', 'avatar_hue']);
+
         $notifications = Notification::where('household_id', $householdId)
             ->where('created_at', '>', $sinceDate)
             ->latest()
@@ -76,6 +80,7 @@ class SyncController extends Controller
 
         return response()->json([
             'server_time'   => now()->toISOString(),
+            'members'       => $members,
             'wallets'       => $wallets,
             'categories'    => $categories,
             'transactions'  => $transactions,
