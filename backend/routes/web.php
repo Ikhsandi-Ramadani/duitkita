@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AppVersionController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BudgetController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -48,5 +49,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('budgets', [BudgetController::class, 'store'])->name('budgets.store');
         Route::put('budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
         Route::delete('budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
+
+        Route::get('settings/app-version', [AppVersionController::class, 'index'])->name('settings.app-version');
+        Route::post('settings/app-version', [AppVersionController::class, 'update'])->name('settings.app-version.update');
     });
 });

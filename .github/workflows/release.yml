@@ -83,35 +83,3 @@ jobs:
             mobile/build/app/outputs/flutter-apk/app-x86_64-release.apk
           draft: false
           prerelease: false
-
-      - name: Update VersionController on VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            BACKEND=$(readlink -f /var/www/apps/duitkita/current/backend)
-            sudo tee "$BACKEND/app/Http/Controllers/Api/VersionController.php" > /dev/null << 'PHPEOF'
-            <?php
-            namespace App\Http\Controllers\Api;
-            use App\Http\Controllers\Controller;
-            use Illuminate\Http\JsonResponse;
-
-            class VersionController extends Controller
-            {
-                public function index(): JsonResponse
-                {
-                    return response()->json([
-                        'version' => '${{ github.event.inputs.version }}',
-                        'build'   => ${{ github.event.inputs.build_number }},
-                        'url'     => 'https://github.com/Ikhsandi-Ramadani/duitkita/releases/download/v${{ github.event.inputs.version }}/app-arm64-v8a-release.apk',
-                        'notes'   => '${{ github.event.inputs.release_notes }}',
-                        'force'   => ${{ github.event.inputs.force_update }},
-                    ]);
-                }
-            }
-            PHPEOF
-            cd "$BACKEND"
-            sudo php artisan config:cache
-            sudo php artisan route:cache

@@ -179,6 +179,11 @@ const navItems = [
         label: 'Budgets',
         iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />',
     },
+    {
+        href: '/admin/settings/app-version',
+        label: 'Versi Aplikasi',
+        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />',
+    },
 ]
 
 function isActive(href) {
