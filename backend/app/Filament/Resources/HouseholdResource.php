@@ -14,7 +14,7 @@ class HouseholdResource extends Resource
 {
     protected static ?string $model = Household::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-home-modern';
+    protected static string $navigationIcon = 'heroicon-o-home-modern';
 
     protected static ?string $navigationLabel = 'Households';
 
