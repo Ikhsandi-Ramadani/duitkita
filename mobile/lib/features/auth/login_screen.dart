@@ -198,7 +198,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
 
       // Pull fresh data from server before navigating
-      await ref.read(syncServiceProvider).initialPull();
+      try {
+        await ref.read(syncServiceProvider).initialPull();
+      } on DioException catch (syncErr) {
+        final syncMsg = syncErr.response?.data is Map
+            ? (syncErr.response!.data['message'] as String?)
+            : null;
+        final detail = '[sync ${syncErr.response?.statusCode}] ${syncMsg ?? syncErr.message}';
+        setState(() {
+          _loading = false;
+          _error = 'Login berhasil tapi sync gagal: $detail';
+        });
+        return;
+      } catch (syncErr) {
+        setState(() {
+          _loading = false;
+          _error = 'Login berhasil tapi sync error: $syncErr';
+        });
+        return;
+      }
 
       if (mounted) context.go('/home');
     } on DioException catch (e) {
