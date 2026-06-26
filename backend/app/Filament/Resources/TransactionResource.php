@@ -17,7 +17,7 @@ class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
 
-    protected static $navigationIcon = 'heroicon-o-arrows-right-left';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
     protected static ?string $navigationLabel = 'Transactions';
 
