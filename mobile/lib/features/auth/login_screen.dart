@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -197,10 +198,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
       if (mounted) context.go('/home');
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response!.data['message'] as String?)
+          : null;
+      setState(() {
+        _loading = false;
+        _error = serverMsg ?? 'Gagal terhubung ke server. Coba lagi atau gunakan mode demo.';
+      });
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Gagal terhubung ke server. Coba lagi atau gunakan mode demo.';
+        _error = 'Terjadi kesalahan. Coba lagi.';
       });
     }
   }
