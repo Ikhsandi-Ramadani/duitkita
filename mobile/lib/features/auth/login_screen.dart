@@ -243,6 +243,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final db = ref.read(dbProvider);
     // Delete existing session data and re-seed
     await db.delete(db.sessionKv).go();
+    // Clear any stale auth token so API calls don't use a real session
+    await ref.read(apiClientProvider).clearToken();
     // Re-seed if needed
     await seedIfEmpty(db);
     final sessionRepo = ref.read(sessionRepoProvider);

@@ -27,6 +27,9 @@ class HomeScreen extends ConsumerWidget {
     final userIdAsync = ref.watch(currentUserIdProvider);
     final userId = userIdAsync.value ?? 1;
 
+    // Trigger background sync (push pending + pull) on every home mount
+    ref.watch(backgroundSyncProvider);
+
     return Scaffold(
       backgroundColor: colors.appBg,
       body: CustomScrollView(

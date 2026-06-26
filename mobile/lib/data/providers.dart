@@ -43,7 +43,9 @@ final dbReadyProvider = FutureProvider<AppDatabase>((ref) async {
 // ---------------------------------------------------------------------------
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
-  (_) => const FlutterSecureStorage(),
+  (_) => const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  ),
 );
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -216,6 +218,18 @@ final removeMemberProvider = Provider<Future<void> Function(int)>((ref) {
     await ref.read(apiClientProvider).removeMember(userId);
     await ref.read(memberRepoProvider).deleteById(userId);
   };
+});
+
+// ---------------------------------------------------------------------------
+// Background sync
+// ---------------------------------------------------------------------------
+
+/// Runs pushPending() then pull() once when watched.
+/// Watch this in HomeScreen to trigger sync on every home mount.
+final backgroundSyncProvider = FutureProvider<void>((ref) async {
+  final sync = ref.watch(syncServiceProvider);
+  await sync.pushPending();
+  await sync.pull();
 });
 
 // ---------------------------------------------------------------------------

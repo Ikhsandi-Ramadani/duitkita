@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' show basename;
 
@@ -26,15 +27,15 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
-        print('[API] ${options.method} ${options.uri}');
+        if (kDebugMode) print('[API] ${options.method} ${options.uri}');
         handler.next(options);
       },
       onResponse: (response, handler) {
-        print('[API] ${response.statusCode} ${response.requestOptions.uri}');
+        if (kDebugMode) print('[API] ${response.statusCode} ${response.requestOptions.uri}');
         handler.next(response);
       },
       onError: (error, handler) {
-        print('[API ERROR] ${error.response?.statusCode} ${error.requestOptions.uri}: ${error.response?.data}');
+        if (kDebugMode) print('[API ERROR] ${error.response?.statusCode} ${error.requestOptions.uri}: ${error.response?.data}');
         handler.next(error);
       },
     ));

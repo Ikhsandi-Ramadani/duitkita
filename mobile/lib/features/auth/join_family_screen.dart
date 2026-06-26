@@ -151,13 +151,31 @@ class _JoinFamilyScreenState extends ConsumerState<JoinFamilyScreen> {
     setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
-      await api.join({'code': _code.toUpperCase()});
+      final data = await api.join({'code': _code.toUpperCase()});
+
+      // Persist token returned by join
+      final token = data['token'] as String?;
+      if (token != null) await api.persistToken(token);
+
+      // Save current user id
+      final sessionRepo = ref.read(sessionRepoProvider);
+      final userId = data['user']?['id'] as int?;
+      if (userId != null) await sessionRepo.setCurrentUserId(userId);
+
+      // Save invite code for this household
+      final inviteCode = data['household']?['invite_code'] as String?;
+      if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
+
+      // Clear stale local data then do a full pull
+      await ref.read(dbProvider).clearAll();
+      await ref.read(syncServiceProvider).initialPull();
+
       if (mounted) context.go('/home');
-    } catch (_) {
+    } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal terhubung. Periksa kode dan koneksi.')),
+          SnackBar(content: Text('Gagal bergabung: $e')),
         );
       }
     }

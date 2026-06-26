@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
 import '../db/app_database.dart';
 import '../repositories/transaction_repository.dart';
@@ -38,6 +39,13 @@ class SyncService {
   final MemberRepository memberRepo;
   final SessionRepository sessionRepo;
   final NotificationRepository notifRepo;
+
+  static int _toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is double) return v.round();
+    return int.tryParse(v.toString()) ?? 0;
+  }
 
   /// Push all pending (pendingSync=true) transactions to the server.
   Future<void> pushPending() async {
@@ -104,163 +112,203 @@ class SyncService {
   Future<void> _upsertAll(Map<String, dynamic> data) async {
     // Members
     if (data['members'] != null) {
-      final members = (data['members'] as List).cast<Map<String, dynamic>>();
-      await memberRepo.upsertAll(members
-          .map((m) => MembersCompanion(
-                id: Value(m['id'] as int),
-                name: Value(m['name'] as String),
-                email: Value(m['email'] as String),
-                role: Value(m['role'] as String),
-                avatarHue: Value(m['avatar_hue'] as int? ?? 162),
-              ))
-          .toList());
+      try {
+        final members = (data['members'] as List).cast<Map<String, dynamic>>();
+        await memberRepo.upsertAll(members
+            .map((m) => MembersCompanion(
+                  id: Value(_toInt(m['id'])),
+                  name: Value((m['name'] as String?) ?? ''),
+                  email: Value((m['email'] as String?) ?? ''),
+                  role: Value((m['role'] as String?) ?? 'member'),
+                  avatarHue: Value((m['avatar_hue'] as int?) ?? 162),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] member upsert error: $e');
+      }
     }
 
     // Wallets
     if (data['wallets'] != null) {
-      final wallets = (data['wallets'] as List).cast<Map<String, dynamic>>();
-      await walletRepo.upsertAll(wallets
-          .map((w) => WalletsCompanion(
-                id: Value(w['id'] as int),
-                scope: Value(w['scope'] as String),
-                ownerUserId: Value(w['owner_user_id'] as int?),
-                name: Value(w['name'] as String),
-                type: Value(w['type'] as String),
-                icon: Value(w['icon'] as String?),
-                initialBalance: Value(w['initial_balance'] as int),
-                currentBalance: Value(w['current_balance'] as int),
-                deleted: Value((w['deleted'] as bool?) ?? false),
-              ))
-          .toList());
+      try {
+        final wallets = (data['wallets'] as List).cast<Map<String, dynamic>>();
+        await walletRepo.upsertAll(wallets
+            .map((w) => WalletsCompanion(
+                  id: Value(_toInt(w['id'])),
+                  scope: Value((w['scope'] as String?) ?? 'household'),
+                  ownerUserId: Value(w['owner_user_id'] as int?),
+                  name: Value((w['name'] as String?) ?? ''),
+                  type: Value((w['type'] as String?) ?? 'cash'),
+                  icon: Value(w['icon'] as String?),
+                  initialBalance: Value(_toInt(w['initial_balance'])),
+                  currentBalance: Value(_toInt(w['current_balance'])),
+                  deleted: Value((w['deleted'] as bool?) ?? false),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] wallet upsert error: $e');
+      }
     }
 
     // Categories
     if (data['categories'] != null) {
-      final cats = (data['categories'] as List).cast<Map<String, dynamic>>();
-      await categoryRepo.upsertAll(cats
-          .map((c) => CategoriesCompanion(
-                id: Value(c['id'] as int),
-                name: Value(c['name'] as String),
-                type: Value(c['type'] as String),
-                icon: Value(c['icon'] as String),
-                hue: Value(c['hue'] as int),
-                parentId: Value(c['parent_id'] as int?),
-              ))
-          .toList());
+      try {
+        final cats = (data['categories'] as List).cast<Map<String, dynamic>>();
+        await categoryRepo.upsertAll(cats
+            .map((c) => CategoriesCompanion(
+                  id: Value(_toInt(c['id'])),
+                  name: Value((c['name'] as String?) ?? ''),
+                  type: Value((c['type'] as String?) ?? 'expense'),
+                  icon: Value((c['icon'] as String?) ?? ''),
+                  hue: Value(_toInt(c['hue'])),
+                  parentId: Value(c['parent_id'] as int?),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] category upsert error: $e');
+      }
     }
 
     // Transactions
     if (data['transactions'] != null) {
-      final txs = (data['transactions'] as List).cast<Map<String, dynamic>>();
-      for (final t in txs) {
-        await txRepo.upsertFromServer(TransactionsCompanion(
-          clientId: Value(t['client_id'] as String),
-          serverId: Value(t['id'] as int?),
-          type: Value(t['type'] as String),
-          walletId: Value(t['wallet_id'] as int),
-          targetWalletId: Value(t['target_wallet_id'] as int?),
-          categoryId: Value(t['category_id'] as int?),
-          amount: Value(t['amount'] as int),
-          date: Value(DateTime.parse(t['date'] as String)),
-          note: Value(t['note'] as String?),
-          recordedBy: Value(t['recorded_by'] as int),
-          spentBy: Value(t['spent_by'] as int?),
-          receiptPath: Value(t['receipt_path'] as String?),
-          updatedAt: Value(DateTime.parse(t['updated_at'] as String)),
-          deleted: Value((t['deleted'] as bool?) ?? false),
-          pendingSync: const Value(false),
-        ));
+      try {
+        final txs = (data['transactions'] as List).cast<Map<String, dynamic>>();
+        for (final t in txs) {
+          try {
+            await txRepo.upsertFromServer(TransactionsCompanion(
+              clientId: Value((t['client_id'] as String?) ?? ''),
+              serverId: Value(t['id'] as int?),
+              type: Value((t['type'] as String?) ?? 'expense'),
+              walletId: Value(_toInt(t['wallet_id'])),
+              targetWalletId: Value(t['target_wallet_id'] as int?),
+              categoryId: Value(t['category_id'] as int?),
+              amount: Value(_toInt(t['amount'])),
+              date: Value(DateTime.parse((t['date'] as String?) ?? DateTime.now().toIso8601String())),
+              note: Value(t['note'] as String?),
+              recordedBy: Value(_toInt(t['recorded_by'])),
+              spentBy: Value(t['spent_by'] as int?),
+              receiptPath: Value(t['receipt_path'] as String?),
+              updatedAt: Value(DateTime.parse((t['updated_at'] as String?) ?? DateTime.now().toIso8601String())),
+              deleted: Value((t['deleted'] as bool?) ?? false),
+              pendingSync: const Value(false),
+            ));
+          } catch (e) {
+            if (kDebugMode) print('[Sync] transaction upsert error (id=${t['id']}): $e');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) print('[Sync] transactions block error: $e');
       }
     }
 
     // Budgets
     if (data['budgets'] != null) {
-      final budgets = (data['budgets'] as List).cast<Map<String, dynamic>>();
-      await budgetRepo.upsertAll(budgets
-          .map((b) => BudgetsCompanion(
-                id: Value(b['id'] as int),
-                scope: Value(b['scope'] as String),
-                ownerUserId: Value(b['owner_user_id'] as int?),
-                categoryId: Value(b['category_id'] as int),
-                amount: Value(b['amount'] as int),
-                periodMonth: Value(b['period_month'] as String),
-              ))
-          .toList());
+      try {
+        final budgets = (data['budgets'] as List).cast<Map<String, dynamic>>();
+        await budgetRepo.upsertAll(budgets
+            .map((b) => BudgetsCompanion(
+                  id: Value(_toInt(b['id'])),
+                  scope: Value((b['scope'] as String?) ?? 'household'),
+                  ownerUserId: Value(b['owner_user_id'] as int?),
+                  categoryId: Value(_toInt(b['category_id'])),
+                  amount: Value(_toInt(b['amount'])),
+                  periodMonth: Value((b['period_month'] as String?) ?? ''),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] budget upsert error: $e');
+      }
     }
 
     // SavingsGoals
     if (data['savings_goals'] != null) {
-      final goals =
-          (data['savings_goals'] as List).cast<Map<String, dynamic>>();
-      await goalRepo.upsertAll(goals
-          .map((g) => SavingsGoalsCompanion(
-                id: Value(g['id'] as int),
-                scope: Value(g['scope'] as String),
-                ownerUserId: Value(g['owner_user_id'] as int?),
-                name: Value(g['name'] as String),
-                targetAmount: Value(g['target_amount'] as int),
-                currentAmount: Value(g['current_amount'] as int),
-                targetDate: Value(g['target_date'] != null
-                    ? DateTime.parse(g['target_date'] as String)
-                    : null),
-                walletId: Value(g['wallet_id'] as int),
-                icon: Value(g['icon'] as String),
-                hue: Value(g['hue'] as int),
-                deleted: Value((g['deleted'] as bool?) ?? false),
-              ))
-          .toList());
+      try {
+        final goals =
+            (data['savings_goals'] as List).cast<Map<String, dynamic>>();
+        await goalRepo.upsertAll(goals
+            .map((g) => SavingsGoalsCompanion(
+                  id: Value(_toInt(g['id'])),
+                  scope: Value((g['scope'] as String?) ?? 'household'),
+                  ownerUserId: Value(g['owner_user_id'] as int?),
+                  name: Value((g['name'] as String?) ?? ''),
+                  targetAmount: Value(_toInt(g['target_amount'])),
+                  currentAmount: Value(_toInt(g['current_amount'])),
+                  targetDate: Value(g['target_date'] != null
+                      ? DateTime.parse(g['target_date'] as String)
+                      : null),
+                  walletId: Value(_toInt(g['wallet_id'])),
+                  icon: Value((g['icon'] as String?) ?? ''),
+                  hue: Value(_toInt(g['hue'])),
+                  deleted: Value((g['deleted'] as bool?) ?? false),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] savings_goal upsert error: $e');
+      }
     }
 
     // Debts
     if (data['debts'] != null) {
-      final debts = (data['debts'] as List).cast<Map<String, dynamic>>();
-      await debtRepo.upsertAll(debts
-          .map((d) => DebtsCompanion(
-                id: Value(d['id'] as int),
-                ownerUserId: Value(d['owner_user_id'] as int?),
-                type: Value(d['type'] as String),
-                partyName: Value(d['party_name'] as String),
-                amount: Value(d['amount'] as int),
-                paid: Value(d['paid'] as int),
-                date: Value(DateTime.parse(d['date'] as String)),
-                dueDate: Value(d['due_date'] != null
-                    ? DateTime.parse(d['due_date'] as String)
-                    : null),
-                status: Value(d['status'] as String),
-                note: Value(d['note'] as String?),
-                walletId: Value(d['wallet_id'] as int?),
-                deleted: Value((d['deleted'] as bool?) ?? false),
-              ))
-          .toList());
+      try {
+        final debts = (data['debts'] as List).cast<Map<String, dynamic>>();
+        await debtRepo.upsertAll(debts
+            .map((d) => DebtsCompanion(
+                  id: Value(_toInt(d['id'])),
+                  ownerUserId: Value(d['owner_user_id'] as int?),
+                  type: Value((d['type'] as String?) ?? 'receivable'),
+                  partyName: Value((d['party_name'] as String?) ?? ''),
+                  amount: Value(_toInt(d['amount'])),
+                  paid: Value(_toInt(d['paid'])),
+                  date: Value(DateTime.parse((d['date'] as String?) ?? DateTime.now().toIso8601String())),
+                  dueDate: Value(d['due_date'] != null
+                      ? DateTime.parse(d['due_date'] as String)
+                      : null),
+                  status: Value((d['status'] as String?) ?? 'ongoing'),
+                  note: Value(d['note'] as String?),
+                  walletId: Value(d['wallet_id'] as int?),
+                  deleted: Value((d['deleted'] as bool?) ?? false),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] debt upsert error: $e');
+      }
     }
 
     // Recurrings
     if (data['recurrings'] != null) {
-      final recs = (data['recurrings'] as List).cast<Map<String, dynamic>>();
-      await recurringRepo.upsertAll(recs
-          .map((r) => RecurringsCompanion(
-                id: Value(r['id'] as int),
-                type: Value(r['type'] as String),
-                walletId: Value(r['wallet_id'] as int),
-                categoryId: Value(r['category_id'] as int),
-                amount: Value(r['amount'] as int),
-                freq: Value(r['freq'] as String),
-                nextRunDate: Value(DateTime.parse(r['next_run_date'] as String)),
-                endDate: Value(r['end_date'] != null
-                    ? DateTime.parse(r['end_date'] as String)
-                    : null),
-                autoCreate: Value(r['auto_create'] as bool),
-                note: Value(r['note'] as String?),
-                createdBy: Value(r['created_by'] as int),
-              ))
-          .toList());
+      try {
+        final recs = (data['recurrings'] as List).cast<Map<String, dynamic>>();
+        await recurringRepo.upsertAll(recs
+            .map((r) => RecurringsCompanion(
+                  id: Value(_toInt(r['id'])),
+                  type: Value((r['type'] as String?) ?? 'expense'),
+                  walletId: Value(_toInt(r['wallet_id'])),
+                  categoryId: Value(_toInt(r['category_id'])),
+                  amount: Value(_toInt(r['amount'])),
+                  freq: Value((r['freq'] as String?) ?? 'monthly'),
+                  nextRunDate: Value(DateTime.parse((r['next_run_date'] as String?) ?? DateTime.now().toIso8601String())),
+                  endDate: Value(r['end_date'] != null
+                      ? DateTime.parse(r['end_date'] as String)
+                      : null),
+                  autoCreate: Value((r['auto_create'] as bool?) ?? false),
+                  note: Value(r['note'] as String?),
+                  createdBy: Value(_toInt(r['created_by'])),
+                ))
+            .toList());
+      } catch (e) {
+        if (kDebugMode) print('[Sync] recurring upsert error: $e');
+      }
     }
 
     // Notifications
     if (data['notifications'] != null) {
-      await notifRepo.upsertAll(
-        (data['notifications'] as List).cast<Map<String, dynamic>>(),
-      );
+      try {
+        await notifRepo.upsertAll(
+          (data['notifications'] as List).cast<Map<String, dynamic>>(),
+        );
+      } catch (e) {
+        if (kDebugMode) print('[Sync] notification upsert error: $e');
+      }
     }
   }
 }

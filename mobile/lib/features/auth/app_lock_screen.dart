@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   bool _checking = false;
   bool _hasPinSetup = false;
   bool _loadingPinCheck = true;
+  String? _errorMsg;
   final _localAuth = LocalAuthentication();
 
   @override
@@ -30,19 +32,28 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   Future<void> _checkPinSetup() async {
     try {
-      // Try verifying a dummy PIN — if user has no PIN, backend throws/returns false
-      // Instead check via /me endpoint if user has pin set
       final me = await ref.read(apiClientProvider).me();
       final hasPin = me['has_pin'] == true;
       if (!mounted) return;
       if (!hasPin) {
+        // Server explicitly says no PIN — safe to skip lock
         context.go('/home');
         return;
       }
       setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+    } on DioException catch (e) {
+      // Network error (no response) — fail closed: show PIN screen
+      if (!mounted) return;
+      if (e.response != null) {
+        // Server responded with an error (e.g. 401 token expired) — fail closed
+        setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+      } else {
+        // No connectivity — fail closed
+        setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+      }
     } catch (_) {
-      // Network error or no PIN — skip lock
-      if (mounted) context.go('/home');
+      // Any other error — fail closed
+      if (mounted) setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
     }
   }
 
@@ -82,6 +93,12 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               _UserGreeting(member: member, checking: _checking),
               const SizedBox(height: 24),
               _PinDots(count: _digits.length),
+              const SizedBox(height: 12),
+              if (_errorMsg != null)
+                Text(
+                  _errorMsg!,
+                  style: TextStyle(color: Colors.red.shade300, fontSize: 13),
+                ),
               const Spacer(flex: 3),
               _Keypad(
                 onDigit: _onDigit,
@@ -118,7 +135,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   Future<void> _verifyPin() async {
-    setState(() => _checking = true);
+    setState(() { _checking = true; _errorMsg = null; });
     try {
       final ok = await ref.read(apiClientProvider).verifyPin(_digits.join());
       if (!mounted) return;
@@ -126,11 +143,26 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         context.go('/home');
       } else {
         HapticFeedback.vibrate();
-        setState(() { _digits.clear(); _checking = false; });
+        setState(() { _digits.clear(); _checking = false; _errorMsg = 'PIN salah'; });
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      if (e.response?.statusCode == 401) {
+        // Wrong PIN — server confirmed
+        HapticFeedback.vibrate();
+        setState(() { _digits.clear(); _checking = false; _errorMsg = 'PIN salah'; });
+      } else if (e.response != null) {
+        // Other server error
+        HapticFeedback.vibrate();
+        setState(() { _digits.clear(); _checking = false; _errorMsg = 'Terjadi kesalahan, coba lagi'; });
+      } else {
+        // No connectivity — do NOT go home
+        setState(() { _digits.clear(); _checking = false; _errorMsg = 'Tidak ada koneksi, coba lagi'; });
       }
     } catch (_) {
-      // No PIN set yet or network error → allow through
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      HapticFeedback.vibrate();
+      setState(() { _digits.clear(); _checking = false; _errorMsg = 'Terjadi kesalahan, coba lagi'; });
     }
   }
 
