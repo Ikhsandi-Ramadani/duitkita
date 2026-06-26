@@ -91,9 +91,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/apps/duitkita/current/backend
-            git pull
-            cat > app/Http/Controllers/Api/VersionController.php << 'PHPEOF'
+            BACKEND=$(readlink -f /var/www/apps/duitkita/current/backend)
+            sudo tee "$BACKEND/app/Http/Controllers/Api/VersionController.php" > /dev/null << 'PHPEOF'
             <?php
             namespace App\Http\Controllers\Api;
             use App\Http\Controllers\Controller;
@@ -113,5 +112,6 @@ jobs:
                 }
             }
             PHPEOF
-            php artisan config:cache
-            php artisan route:cache
+            cd "$BACKEND"
+            sudo php artisan config:cache
+            sudo php artisan route:cache
