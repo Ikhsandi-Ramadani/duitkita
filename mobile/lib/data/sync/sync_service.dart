@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import '../api/api_client.dart';
 import '../db/app_database.dart';
 import '../repositories/transaction_repository.dart';
