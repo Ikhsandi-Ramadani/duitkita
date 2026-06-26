@@ -168,17 +168,24 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   Future<void> _onBiometric() async {
     try {
+      final isSupported = await _localAuth.isDeviceSupported();
+      if (!isSupported) return;
       final canCheck = await _localAuth.canCheckBiometrics;
       if (!canCheck) return;
+      final available = await _localAuth.getAvailableBiometrics();
+      if (available.isEmpty) return;
       final ok = await _localAuth.authenticate(
         localizedReason: 'Gunakan biometrik untuk masuk ke DuitKita',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: false,
+        ),
       );
       if (ok && mounted) {
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (mounted) context.go('/home');
+        context.go('/home');
       }
-    } catch (_) {
-      // Graceful no-op on Windows or unavailable biometric
+    } catch (e) {
+      if (kDebugMode) print('[Biometric] error: $e');
     }
   }
 }
