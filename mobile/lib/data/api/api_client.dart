@@ -82,6 +82,16 @@ class ApiClient {
     return data;
   }
 
+  Future<Map<String, dynamic>> forgotPassword(String identifier) async {
+    final res = await _dio.post('/auth/forgot-password', data: {'identifier': identifier});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> resetPassword(Map<String, dynamic> body) async {
+    final res = await _dio.post('/auth/reset-password', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<void> logout() async {
     try {
       await _dio.post('/auth/logout');

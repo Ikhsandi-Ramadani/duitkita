@@ -92,7 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {}, // no-op
+                  onPressed: () => context.push('/forgot-password'),
                   child: Text('Lupa sandi?',
                       style: AppText.label(color: colors.primary)),
                 ),

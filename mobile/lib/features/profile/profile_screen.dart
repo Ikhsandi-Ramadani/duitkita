@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -992,7 +993,12 @@ class _InviteSheet extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      AppToast.show(context, 'Segera hadir');
+                      final code = ref.read(inviteCodeProvider).value;
+                      if (code != null) {
+                        Share.share(
+                          'Bergabung ke keluarga saya di DuitKita! Gunakan kode undangan: $code\n\nDownload DuitKita untuk mulai kelola keuangan keluarga bersama.',
+                        );
+                      }
                     },
                     icon: const Icon(Icons.share_outlined, size: 17),
                     label: const Text('Bagikan'),

@@ -13,6 +13,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/auth/create_family_screen.dart';
 import '../../features/auth/join_family_screen.dart';
+import '../../features/auth/forgot_password_screen.dart';
 import '../../features/budget/budget_screen.dart';
 import '../../features/goals/goals_screen.dart';
 import '../../features/debts/debts_screen.dart';
@@ -39,6 +40,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // No session user → force login
       if (userId == null) {
         if (loc.startsWith('/login')) return null;
+        if (loc.startsWith('/forgot-password')) return null;
         return '/login';
       }
 
@@ -74,6 +76,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const JoinFamilyScreen(),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
       // Main shell with bottom nav (4 branches)

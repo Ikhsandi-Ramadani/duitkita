@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -103,6 +104,68 @@ class AuthController extends Controller
             'token' => $token,
             'user'  => new UserResource($user),
         ]);
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'identifier' => ['required', 'string'],
+        ]);
+
+        $identifier = $request->identifier;
+        $isEmail    = str_contains($identifier, '@');
+
+        $user = $isEmail
+            ? User::where('email', $identifier)->first()
+            : User::where('phone', $identifier)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
+        }
+
+        $otp      = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $cacheKey = 'otp_reset_' . $user->id;
+
+        Cache::put($cacheKey, $otp, now()->addMinutes(10));
+
+        // DEV MODE: OTP returned in response. Replace with mail/SMS in production.
+        return response()->json([
+            'message' => 'Kode reset dikirim',
+            'otp'     => $otp,
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'identifier'            => ['required', 'string'],
+            'otp'                   => ['required', 'string', 'size:6'],
+            'password'              => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $identifier = $request->identifier;
+        $isEmail    = str_contains($identifier, '@');
+
+        $user = $isEmail
+            ? User::where('email', $identifier)->first()
+            : User::where('phone', $identifier)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
+        }
+
+        $cacheKey   = 'otp_reset_' . $user->id;
+        $storedOtp  = Cache::get($cacheKey);
+
+        if ($storedOtp === null || $storedOtp !== $request->otp) {
+            return response()->json(['message' => 'Kode OTP tidak valid atau sudah kadaluarsa.'], 422);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        Cache::forget($cacheKey);
+
+        return response()->json(['message' => 'Password berhasil diubah.']);
     }
 
     public function logout(Request $request): JsonResponse
