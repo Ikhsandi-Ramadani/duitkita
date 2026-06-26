@@ -388,12 +388,13 @@ class _GoalCard extends StatelessWidget {
       accentColor:
           HSLColor.fromAHSL(1.0, goal.hue.toDouble(), 0.55, 0.42).toColor(),
       onConfirm: (amount, walletId) async {
-        if (uid == null) return;
+        final currentUid = uid;
+        if (currentUid == null) return;
         await ref.read(goalRepoProvider).contribute(
               goalId: goal.id,
               amount: amount,
               sourceWalletId: walletId,
-              recordedBy: uid,
+              recordedBy: currentUid,
             );
         if (context.mounted) {
           AppToast.show(context, 'Dana berhasil disisihkan');

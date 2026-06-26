@@ -546,7 +546,7 @@ class _WalletHistory extends ConsumerWidget {
                                 (w) => w?.id == tx.walletId,
                                 orElse: () => null,
                               );
-                          final category = tx.categoryId != null
+                          final Category? category = tx.categoryId != null
                               ? categories.cast<Category?>().firstWhere(
                                     (c) => c?.id == tx.categoryId,
                                     orElse: () => null,

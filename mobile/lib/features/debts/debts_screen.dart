@@ -390,12 +390,13 @@ class _DebtCard extends StatelessWidget {
       initialWalletId: debt.walletId,
       accentColor: debt.type == 'payable' ? colors.expense : colors.income,
       onConfirm: (amount, walletId) async {
-        if (uid == null) return;
+        final currentUid = uid;
+        if (currentUid == null) return;
         await ref.read(debtRepoProvider).pay(
               debtId: debt.id,
               amount: amount,
               walletId: walletId,
-              recordedBy: uid,
+              recordedBy: currentUid,
             );
         if (context.mounted) {
           AppToast.show(context,
