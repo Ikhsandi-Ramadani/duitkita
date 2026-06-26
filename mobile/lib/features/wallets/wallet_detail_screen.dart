@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -194,8 +195,9 @@ class _WalletDetailBody extends ConsumerWidget {
       if (confirmed == true) {
         try {
           await ref.read(apiClientProvider).deleteWallet(wallet.id);
-        } catch (_) {
-          // If the API call fails, still soft-delete locally
+        } catch (e) {
+          // API call failed — still soft-delete locally (offline-first)
+          if (kDebugMode) print('[WalletDetail] deleteWallet error: $e');
         }
         await ref.read(walletRepoProvider).upsert(
               WalletsCompanion(
@@ -670,7 +672,8 @@ class _EditNameSheetState extends ConsumerState<_EditNameSheet> {
         Navigator.of(context).pop();
         AppToast.show(context, 'Nama dompet diperbarui');
       }
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) print('[WalletDetail] updateWallet error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal memperbarui dompet', success: false);
         setState(() => _saving = false);

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1089,7 +1090,8 @@ class _SplitSheetState extends ConsumerState<_SplitSheet> {
         Navigator.of(context).pop();
         AppToast.show(context, 'Pembagian tagihan disimpan');
       }
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) print('[TransactionDetail] updateSplits error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal menyimpan pembagian', success: false);
       }

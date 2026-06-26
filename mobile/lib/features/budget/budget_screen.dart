@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -151,8 +152,9 @@ class _BudgetBodyState extends State<_BudgetBody> {
     final api = widget.ref.read(apiClientProvider);
     try {
       await api.deleteBudget(budget.id);
-    } catch (_) {
+    } catch (e) {
       // Silently continue — delete locally even if API fails (offline-first)
+      if (kDebugMode) print('[Budget] deleteBudget error: $e');
     }
     await repo.delete(budget.id);
     if (mounted) {

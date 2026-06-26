@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -636,7 +637,8 @@ class _AddWalletSheetState extends ConsumerState<_AddWalletSheet> {
         Navigator.of(context).pop();
         AppToast.show(context, 'Dompet "$name" berhasil ditambahkan');
       }
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) print('[WalletsScreen] saveWallet error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal menyimpan dompet', success: false);
         setState(() => _saving = false);

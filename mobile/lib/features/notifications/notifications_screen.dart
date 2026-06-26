@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,8 +28,9 @@ class NotificationsScreen extends ConsumerWidget {
             await ref.read(notificationRepoProvider).markAllRead();
             try {
               await ref.read(apiClientProvider).markAllNotificationsRead();
-            } catch (_) {
+            } catch (e) {
               // Fire-and-forget — local state already updated
+              if (kDebugMode) print('[Notifications] markAllRead error: $e');
             }
           },
         ),
@@ -67,8 +69,9 @@ class NotificationsScreen extends ConsumerWidget {
                     await ref
                         .read(apiClientProvider)
                         .markNotificationRead(notifs[i].id);
-                  } catch (_) {
-                    // Fire-and-forget
+                  } catch (e) {
+                    // Fire-and-forget — local read state already updated
+                    if (kDebugMode) print('[Notifications] markRead error: $e');
                   }
                 }
               },

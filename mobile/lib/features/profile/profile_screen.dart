@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -795,11 +796,13 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                                         '${m.name} telah dihapus dari keluarga',
                                       );
                                     }
-                                  } catch (_) {
+                                  } catch (e) {
+                                    if (kDebugMode) print('[Profile] removeMember error: $e');
                                     if (context.mounted) {
                                       AppToast.show(
                                         context,
                                         'Gagal menghapus anggota. Coba lagi.',
+                                        success: false,
                                       );
                                     }
                                   }
