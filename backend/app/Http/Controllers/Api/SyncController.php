@@ -27,15 +27,13 @@ class SyncController extends Controller
 
     public function pull(Request $request): JsonResponse
     {
-        $request->validate([
-            'since' => ['required', 'string'],
-        ]);
-
         $householdId = $request->user()->household_id;
-        $since       = $request->input('since');
+        $since       = $request->input('since', '0');
 
-        // Parse the ISO8601 timestamp
-        $sinceDate = \Illuminate\Support\Carbon::parse($since);
+        // Accept unix ms timestamp (int) or ISO8601 string
+        $sinceDate = is_numeric($since)
+            ? \Illuminate\Support\Carbon::createFromTimestampMs((int) $since)
+            : \Illuminate\Support\Carbon::parse($since);
 
         $wallets = Wallet::withTrashed()
             ->where('household_id', $householdId)
