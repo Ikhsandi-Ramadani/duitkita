@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -176,10 +177,6 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       if (available.isEmpty) return;
       final ok = await _localAuth.authenticate(
         localizedReason: 'Gunakan biometrik untuk masuk ke DuitKita',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false,
-        ),
       );
       if (ok && mounted) {
         context.go('/home');
