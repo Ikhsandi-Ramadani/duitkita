@@ -47,12 +47,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 120),
-                  child: _QuickActions(),
-                ),
-                const SizedBox(height: 20),
-                EntranceAnimation(
-                  delay: const Duration(milliseconds: 180),
-                  child: _FeatureHub(),
+                  child: _ActionGrid(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
@@ -509,65 +504,82 @@ class _BudgetCard extends ConsumerWidget {
 // Quick actions
 // ---------------------------------------------------------------------------
 
-class _QuickActions extends ConsumerWidget {
+class _ActionGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
 
-    final actions = [
-      _ActionItem(
-        icon: Icons.group_outlined,
-        label: 'Isi Kas\nBersama',
-        onTap: () => context.push('/add-transaction?preset=topup-shared'),
-      ),
-      _ActionItem(
-        icon: Icons.swap_horiz_rounded,
-        label: 'Transfer',
-        onTap: () => context.push('/add-transaction?preset=transfer'),
-      ),
-      _ActionItem(
-        icon: Icons.arrow_upward_rounded,
-        label: 'Pemasukan',
-        onTap: () => context.push('/add-transaction?preset=income'),
-      ),
-      _ActionItem(
-        icon: Icons.document_scanner_outlined,
-        label: 'Scan\nStruk',
-        onTap: () => AppToast.show(context, 'Segera hadir'),
-      ),
+    final items = <_GridItem>[
+      // Row 1 — quick actions (primary tint bg)
+      _GridItem(icon: Icons.group_outlined, label: 'Isi Kas\nBersama', primary: true,
+          onTap: () => context.push('/add-transaction?preset=topup-shared')),
+      _GridItem(icon: Icons.swap_horiz_rounded, label: 'Transfer', primary: true,
+          onTap: () => context.push('/add-transaction?preset=transfer')),
+      _GridItem(icon: Icons.arrow_upward_rounded, label: 'Pemasukan', primary: true,
+          onTap: () => context.push('/add-transaction?preset=income')),
+      _GridItem(icon: Icons.arrow_downward_rounded, label: 'Pengeluaran', primary: true,
+          onTap: () => context.push('/add-transaction?preset=expense')),
+      _GridItem(icon: Icons.document_scanner_outlined, label: 'Scan\nStruk', primary: true,
+          onTap: () => AppToast.show(context, 'Segera hadir')),
+      // Row 2 — feature hubs (surface bg)
+      _GridItem(icon: Icons.tune_rounded, label: 'Anggaran', primary: false,
+          onTap: () => context.push('/budget')),
+      _GridItem(icon: Icons.flag_circle_outlined, label: 'Tujuan', primary: false,
+          onTap: () => context.push('/goals')),
+      _GridItem(icon: Icons.account_balance_outlined, label: 'Utang', primary: false,
+          onTap: () => context.push('/debts')),
+      _GridItem(icon: Icons.autorenew_rounded, label: 'Berulang', primary: false,
+          onTap: () => context.push('/recurring')),
+      _GridItem(icon: Icons.bar_chart_rounded, label: 'Laporan', primary: false,
+          onTap: () => context.push('/reports')),
     ];
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: actions.map((a) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: a.onTap,
-            child: Column(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: colors.primaryTint,
-                    borderRadius: BorderRadius.circular(17),
-                  ),
-                  child: Icon(a.icon, color: colors.primary, size: 24),
+    return GridView.count(
+      crossAxisCount: 5,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 4,
+      childAspectRatio: 0.78,
+      children: items.map((item) {
+        return GestureDetector(
+          onTap: item.onTap,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: item.primary ? colors.primaryTint : colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: item.primary ? null : Border.all(color: colors.border),
+                  boxShadow: item.primary ? null : AppShadows.sm,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  a.label,
+                child: Icon(item.icon,
+                    color: item.primary ? colors.primary : colors.text2,
+                    size: 22),
+              ),
+              const SizedBox(height: 5),
+              Text(item.label,
                   style: AppText.label(color: colors.text2)
-                      .copyWith(height: 1.3),
+                      .copyWith(fontSize: 10.5, height: 1.3),
                   textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+                  maxLines: 2),
+            ],
           ),
         );
       }).toList(),
     );
   }
+}
+
+class _GridItem {
+  const _GridItem({required this.icon, required this.label, required this.primary, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool primary;
+  final VoidCallback onTap;
 }
 
 class _ActionItem {
@@ -594,38 +606,35 @@ class _FeatureHub extends ConsumerWidget {
       _HubItem(icon: Icons.bar_chart_rounded, label: 'Laporan', route: '/reports'),
     ];
 
-    return SizedBox(
-      height: 88,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: hubs.length,
-        separatorBuilder: (_, idx) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final hub = hubs[i];
-          return GestureDetector(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: hubs.map((hub) {
+        return Expanded(
+          child: GestureDetector(
             onTap: () => context.push(hub.route),
             child: Column(
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: colors.surface,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(17),
                     border: Border.all(color: colors.border),
                     boxShadow: AppShadows.sm,
                   ),
-                  child: Icon(hub.icon, color: colors.text2, size: 24),
+                  child: Icon(hub.icon, color: colors.text2, size: 22),
                 ),
                 const SizedBox(height: 6),
                 Text(hub.label,
                     style: AppText.label(color: colors.text2)
-                        .copyWith(fontSize: 12)),
+                        .copyWith(fontSize: 11),
+                    textAlign: TextAlign.center),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

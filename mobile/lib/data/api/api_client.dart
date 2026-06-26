@@ -26,9 +26,15 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        print('[API] ${options.method} ${options.uri}');
         handler.next(options);
       },
+      onResponse: (response, handler) {
+        print('[API] ${response.statusCode} ${response.requestOptions.uri}');
+        handler.next(response);
+      },
       onError: (error, handler) {
+        print('[API ERROR] ${error.response?.statusCode} ${error.requestOptions.uri}: ${error.response?.data}');
         handler.next(error);
       },
     ));
@@ -64,10 +70,10 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(String identifier, String password) async {
     final res = await _dio.post(
       '/auth/login',
-      data: {'email': email, 'password': password},
+      data: {'identifier': identifier, 'password': password},
     );
     final data = res.data as Map<String, dynamic>;
     if (data['token'] != null) {

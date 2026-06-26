@@ -71,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               // Email field
               _InputField(
                 controller: _emailCtrl,
-                label: 'Email',
+                label: 'Email atau No. HP',
                 icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -197,7 +197,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final inviteCode = data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
 
-      // Pull fresh data from server before navigating
+      // Clear stale local data, then pull fresh from server
+      await ref.read(dbProvider).clearAll();
       try {
         await ref.read(syncServiceProvider).initialPull();
       } on DioException catch (syncErr) {

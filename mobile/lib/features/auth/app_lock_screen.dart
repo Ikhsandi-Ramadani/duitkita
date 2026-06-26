@@ -58,7 +58,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                 onBackspace: _onBackspace,
                 onBiometric: _onBiometric,
                 memberName: member?.name ?? 'kamu',
-                onSwitchAccount: () => context.go('/login'),
+                onSwitchAccount: () async {
+                  final db = ref.read(dbProvider);
+                  await ref.read(apiClientProvider).clearToken();
+                  await db.delete(db.sessionKv).go();
+                  await db.clearAll();
+                  if (context.mounted) context.go('/login');
+                },
               ),
               const Spacer(flex: 1),
             ],

@@ -35,6 +35,7 @@ class AuthController extends Controller
         $user = User::create([
             'name'         => $request->name,
             'email'        => $request->email,
+            'phone'        => $request->phone,
             'password'     => $request->password,
             'household_id' => $household->id,
             'role'         => 'owner',
@@ -58,6 +59,7 @@ class AuthController extends Controller
         $user = User::create([
             'name'         => $request->name,
             'email'        => $request->email,
+            'phone'        => $request->phone,
             'password'     => $request->password,
             'household_id' => $household->id,
             'role'         => 'member',
@@ -82,11 +84,16 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $identifier = $request->identifier;
+        $isEmail    = str_contains($identifier, '@');
+
+        $user = $isEmail
+            ? User::where('email', $identifier)->first()
+            : User::where('phone', $identifier)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'identifier' => ['The provided credentials are incorrect.'],
             ]);
         }
 

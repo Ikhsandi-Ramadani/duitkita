@@ -17,6 +17,7 @@ class JoinRequest extends FormRequest
             'invite_code' => ['required', 'string', 'size:6'],
             'name'        => ['required', 'string', 'max:255'],
             'email'       => ['required', 'email', 'unique:users,email'],
+            'phone'       => ['nullable', 'string', 'max:20', 'unique:users,phone'],
             'password'    => ['required', 'string', 'min:8'],
         ];
     }
