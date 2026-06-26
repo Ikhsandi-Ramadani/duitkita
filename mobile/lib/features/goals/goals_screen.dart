@@ -388,12 +388,12 @@ class _GoalCard extends StatelessWidget {
       accentColor:
           HSLColor.fromAHSL(1.0, goal.hue.toDouble(), 0.55, 0.42).toColor(),
       onConfirm: (amount, walletId) async {
-        final userId = uid ?? 1;
+        if (uid == null) return;
         await ref.read(goalRepoProvider).contribute(
               goalId: goal.id,
               amount: amount,
               sourceWalletId: walletId,
-              recordedBy: userId,
+              recordedBy: uid,
             );
         if (context.mounted) {
           AppToast.show(context, 'Dana berhasil disisihkan');
@@ -462,7 +462,8 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
 
     // Compute a pseudo-id
     final pseudoId = now.millisecondsSinceEpoch % 2147483647;
-    final userId = widget.ref.read(currentUserIdProvider).value ?? 1;
+    final userId = widget.ref.read(currentUserIdProvider).value;
+    if (userId == null) return;
 
     await widget.ref.read(goalRepoProvider).upsert(
           SavingsGoalsCompanion.insert(

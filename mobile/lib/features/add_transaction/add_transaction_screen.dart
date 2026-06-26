@@ -174,7 +174,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     try {
       final repo = ref.read(transactionRepoProvider);
-      final userId = ref.read(currentUserIdProvider).value ?? 1;
+      final userId = ref.read(currentUserIdProvider).value;
+      if (userId == null) throw Exception('Sesi tidak valid, silakan login ulang');
       final now = DateTime.now();
 
       final int saveAmount;

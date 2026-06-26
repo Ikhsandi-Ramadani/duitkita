@@ -192,7 +192,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final api = ref.read(apiClientProvider);
       final data = await api.login(_emailCtrl.text.trim(), _passCtrl.text);
       final sessionRepo = ref.read(sessionRepoProvider);
-      final userId = data['user']?['id'] as int? ?? 1;
+      final userId = data['user']?['id'] as int?;
+      if (userId == null) throw Exception('Server tidak mengembalikan user ID');
       await sessionRepo.setCurrentUserId(userId);
       final inviteCode = data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);

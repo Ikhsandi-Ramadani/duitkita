@@ -390,12 +390,12 @@ class _DebtCard extends StatelessWidget {
       initialWalletId: debt.walletId,
       accentColor: debt.type == 'payable' ? colors.expense : colors.income,
       onConfirm: (amount, walletId) async {
-        final userId = uid ?? 1;
+        if (uid == null) return;
         await ref.read(debtRepoProvider).pay(
               debtId: debt.id,
               amount: amount,
               walletId: walletId,
-              recordedBy: userId,
+              recordedBy: uid,
             );
         if (context.mounted) {
           AppToast.show(context,
@@ -449,7 +449,8 @@ class _AddDebtSheetState extends State<_AddDebtSheet> {
     final dueDate =
         _dueDays != null ? now.add(Duration(days: _dueDays!)) : null;
     final pseudoId = now.millisecondsSinceEpoch % 2147483647;
-    final userId = widget.ref.read(currentUserIdProvider).value ?? 1;
+    final userId = widget.ref.read(currentUserIdProvider).value;
+    if (userId == null) return;
 
     await widget.ref.read(debtRepoProvider).upsert(
           DebtsCompanion.insert(
