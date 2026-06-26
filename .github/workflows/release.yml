@@ -91,7 +91,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/duitkita
+            cd /var/www/apps/duitkita/current/backend
             git pull
             cat > app/Http/Controllers/Api/VersionController.php << 'PHPEOF'
             <?php
