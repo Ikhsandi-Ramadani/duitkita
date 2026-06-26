@@ -37,7 +37,7 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build Release APK
         working-directory: mobile
         run: |
           API_URL="${{ github.event.inputs.api_url || 'https://duitkita.ikhsandi.web.id' }}"
@@ -46,9 +46,24 @@ jobs:
             --split-per-abi \
             --dart-define=API_BASE_URL="$API_URL/api"
 
-      - name: Upload APK artifacts
+      - name: Build Debug APK
+        working-directory: mobile
+        run: |
+          API_URL="${{ github.event.inputs.api_url || 'https://duitkita.ikhsandi.web.id' }}"
+          flutter build apk \
+            --debug \
+            --dart-define=API_BASE_URL="$API_URL/api"
+
+      - name: Upload Release APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: duitkita-apk
-          path: mobile/build/app/outputs/flutter-apk/*.apk
+          name: duitkita-apk-release
+          path: mobile/build/app/outputs/flutter-apk/*-release.apk
+          retention-days: 7
+
+      - name: Upload Debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: duitkita-apk-debug
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
