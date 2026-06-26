@@ -63,7 +63,6 @@ class HouseholdResource extends Resource
     {
         return [
             'index' => Pages\ListHouseholds::route('/'),
-            'view'  => Pages\ViewHousehold::route('/{record}'),
         ];
     }
 
