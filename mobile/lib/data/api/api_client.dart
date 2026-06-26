@@ -85,16 +85,16 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> me() async {
-    final res = await _dio.get('/auth/me');
+    final res = await _dio.get('/me');
     return res.data as Map<String, dynamic>;
   }
 
   Future<void> setPin(String pin) async {
-    await _dio.post('/auth/pin', data: {'pin': pin});
+    await _dio.put('/me/pin', data: {'pin': pin});
   }
 
   Future<bool> verifyPin(String pin) async {
-    final res = await _dio.post('/auth/pin/verify', data: {'pin': pin});
+    final res = await _dio.post('/me/pin/verify', data: {'pin': pin});
     return (res.data as Map<String, dynamic>)['valid'] == true;
   }
 
