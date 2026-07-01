@@ -29,6 +29,7 @@ import '../../features/categories/categories_screen.dart';
 // Router provider so we can inject Riverpod for the redirect guard.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
+    navigatorKey: ref.watch(appNavigatorKeyProvider),
     initialLocation: '/splash',
     redirect: (context, state) async {
       final userId = await ref.read(sessionRepoProvider).getCurrentUserId();

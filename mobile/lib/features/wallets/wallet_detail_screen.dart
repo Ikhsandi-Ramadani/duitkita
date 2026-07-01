@@ -18,6 +18,14 @@ import '../../ui/widgets/empty_state.dart';
 import '../../ui/widgets/entrance_animation.dart';
 import '../../ui/widgets/tx_row.dart';
 
+/// Streams a single wallet by id. Top-level provider so Riverpod can cache
+/// its state across rebuilds — an inline `StreamProvider.autoDispose` inside
+/// `ref.watch` would reset to loading on every build and never resolve.
+final walletByIdProvider =
+    StreamProvider.autoDispose.family<Wallet?, int>((ref, walletId) {
+  return ref.watch(walletRepoProvider).watchById(walletId);
+});
+
 class WalletDetailScreen extends ConsumerWidget {
   const WalletDetailScreen({super.key, required this.walletId});
 
@@ -26,10 +34,11 @@ class WalletDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
-    final walletAsync = ref.watch(
-      StreamProvider.autoDispose<Wallet?>((ref) =>
-          ref.watch(walletRepoProvider).watchById(walletId)),
-    );
+    final walletAsync = ref.watch(walletByIdProvider(walletId));
+
+    if (kDebugMode) {
+      print('[WalletDetail] build walletId=$walletId state=${walletAsync.isLoading ? "loading" : walletAsync.hasError ? "error" : walletAsync.hasValue ? "data(${walletAsync.value?.name})" : "idle"}');
+    }
 
     return walletAsync.when(
       data: (wallet) {

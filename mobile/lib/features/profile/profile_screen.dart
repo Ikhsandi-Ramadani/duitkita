@@ -172,6 +172,13 @@ class ProfileScreen extends ConsumerWidget {
                         label: 'Tentang DuitKita',
                         onTap: () => _showAboutDialog(context),
                       ),
+                      if (kDebugMode)
+                        _SettingsTile(
+                          icon: Icons.http_outlined,
+                          label: 'HTTP Inspector (Alice)',
+                          onTap: () =>
+                              ref.read(aliceProvider)?.showInspector(),
+                        ),
                     ]),
                   ),
                   const SizedBox(height: 24),
@@ -994,12 +1001,17 @@ class _InviteSheet extends ConsumerWidget {
                 child: SizedBox(
                   height: 46,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.of(context).pop();
                       final code = ref.read(inviteCodeProvider).value;
                       if (code != null) {
-                        Share.share(
-                          'Bergabung ke keluarga saya di DuitKita! Gunakan kode undangan: $code\n\nDownload DuitKita untuk mulai kelola keuangan keluarga bersama.',
+                        await SharePlus.instance.share(
+                          ShareParams(
+                            text: 'Bergabung ke keluarga saya di DuitKita! '
+                                'Gunakan kode undangan: $code\n\n'
+                                'Download DuitKita untuk mulai kelola keuangan '
+                                'keluarga bersama.',
+                          ),
                         );
                       }
                     },

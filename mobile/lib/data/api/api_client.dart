@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:alice_dio/alice_dio_adapter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,7 +13,7 @@ const _kBaseUrl = String.fromEnvironment(
 const _kTokenKey = 'auth_token';
 
 class ApiClient {
-  ApiClient({FlutterSecureStorage? storage})
+  ApiClient({FlutterSecureStorage? storage, AliceDioAdapter? aliceAdapter})
       : _storage = storage ?? const FlutterSecureStorage() {
     _dio = Dio(BaseOptions(
       baseUrl: _kBaseUrl,
@@ -39,6 +40,12 @@ class ApiClient {
         handler.next(error);
       },
     ));
+
+    // Alice HTTP inspector — captures every request/response/error for the
+    // in-app inspector UI. Debug-only (adapter is null in release).
+    if (aliceAdapter != null) {
+      _dio.interceptors.add(aliceAdapter);
+    }
   }
 
   late final Dio _dio;

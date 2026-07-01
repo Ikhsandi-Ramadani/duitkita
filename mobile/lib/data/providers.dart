@@ -1,3 +1,7 @@
+import 'package:alice/alice.dart';
+import 'package:alice_dio/alice_dio_adapter.dart';
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter/material.dart' hide Category, Notification;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'db/app_database.dart';
@@ -48,9 +52,36 @@ final secureStorageProvider = Provider<FlutterSecureStorage>(
   ),
 );
 
+/// Single navigator key shared between GoRouter and Alice so the inspector
+/// overlay can push on top of the router's navigator. Debug-only.
+final appNavigatorKeyProvider = Provider<GlobalKey<NavigatorState>>(
+  (_) => GlobalKey<NavigatorState>(debugLabel: 'appRouter'),
+);
+
+/// Dio interceptor adapter that feeds HTTP calls into Alice. Attached to Dio
+/// in [ApiClient]; wired to the [aliceProvider] instance via `addAdapter`.
+/// Null in release builds.
+final aliceDioAdapterProvider = Provider<AliceDioAdapter?>((ref) {
+  if (!kDebugMode) return null;
+  final alice = ref.watch(aliceProvider);
+  if (alice == null) return null;
+  final adapter = AliceDioAdapter();
+  alice.addAdapter(adapter);
+  return adapter;
+});
+
+/// Alice HTTP inspector. Captures every Dio call made through ApiClient.
+/// Open via `alice.showInspector()` (shake gesture or Profile button).
+final aliceProvider = Provider<Alice?>((ref) {
+  if (!kDebugMode) return null;
+  final navigatorKey = ref.watch(appNavigatorKeyProvider);
+  return Alice()..setNavigatorKey(navigatorKey);
+});
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
-  return ApiClient(storage: storage);
+  final aliceAdapter = ref.watch(aliceDioAdapterProvider);
+  return ApiClient(storage: storage, aliceAdapter: aliceAdapter);
 });
 
 // ---------------------------------------------------------------------------
