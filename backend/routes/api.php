@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BudgetController;
+use App\Http\Controllers\Api\DownloadController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DebtController;
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\Route;
 
 // Public version check (no auth required)
 Route::get('version', [VersionController::class, 'index']);
+
+// Public APK download (no auth) — used by the in-app update flow.
+Route::get('download/apk', [DownloadController::class, 'apk']);
 
 // Public auth routes
 Route::prefix('auth')->group(function () {
