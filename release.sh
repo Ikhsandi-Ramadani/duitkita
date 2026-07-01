@@ -1,30 +1,26 @@
 #!/bin/bash
 # DuitKita — Release orchestrator (run from project root on dev machine)
 #
-# Builds the release APK, uploads it as a GitHub release, flips app_settings
-# on the server, then tags + pushes git.
+# Builds the release APK, uploads it as a GitHub release, tags + pushes git.
+# Server app_settings (version/build) updated manually via admin web form
+# after the script finishes — see the final-step reminder at the end.
 #
-# Requires: gh CLI authenticated, flutter, ssh access to server (for settings flip).
+# Requires: gh CLI authenticated, flutter.
 #
 # Usage:
 #   bash release.sh                  # release current pubspec version
 #   bash release.sh 1.0.2            # bump pubspec to 1.0.2 first, then release
 #
 # Env (override in ~/.duitkita-release.env or shell):
-#   SSH_HOST   — e.g. root@duitkita.ikhsandi.web.id  (or a Host alias from ~/.ssh/config)
-#   APP_DIR    — server path to project     (default: /var/www/duitkita)
 #   API_URL    — public base URL, no /api   (default: https://duitkita.ikhsandi.web.id)
 #   REPO       — GitHub repo slug           (default: Ikhsandi-Ramadani/duitkita)
 #   ABI        — target Android ABI         (default: arm64-v8a)
-#   SKIP_FLIP=1 — skip server settings update (only build + release + tag)
 
 set -euo pipefail
 
 # ─── Load config ────────────────────────────────────────────────────────────
 [ -f ~/.duitkita-release.env ] && source ~/.duitkita-release.env
 
-SSH_HOST="${SSH_HOST:-root@duitkita.ikhsandi.web.id}"
-APP_DIR="${APP_DIR:-/var/www/duitkita}"
 API_URL="${API_URL:-https://duitkita.ikhsandi.web.id}"
 REPO="${REPO:-Ikhsandi-Ramadani/duitkita}"
 ABI="${ABI:-arm64-v8a}"
@@ -84,36 +80,7 @@ gh release create "v${VERSION}+${BUILD}" "$APK#$ASSET_NAME" \
 - Download asset: \`$ASSET_NAME\`"
 ok "Release published: https://github.com/${REPO}/releases/tag/v${VERSION}%2B${BUILD}"
 
-# ─── 4. Flip app_settings on server ─────────────────────────────────────────
-DL_URL="https://github.com/${REPO}/releases/latest/download/app-${ABI}-release.apk"
-if [ "${SKIP_FLIP:-0}" = "1" ]; then
-  warn "SKIP_FLIP=1 — server settings not updated"
-else
-  step "Update app_settings → version=${VERSION} build=${BUILD}"
-  ssh "$SSH_HOST" bash -s <<EOF
-set -e
-cd ${APP_DIR}/backend
-php artisan tinker --execute="
-  App\\\Models\\\AppSetting::set('app_version', '${VERSION}');
-  App\\\Models\\\AppSetting::set('app_build', (string) ${BUILD});
-  App\\\Models\\\AppSetting::set('app_download_url', '${DL_URL}');
-"
-php artisan config:clear
-EOF
-  ok "app_settings updated (download_url → ${DL_URL})"
-fi
-
-# ─── 5. Verify ───────────────────────────────────────────────────────────────
-step "Verify /api/version"
-REMOTE_JSON="$(curl -fsS "${API_URL}/api/version" 2>/dev/null || echo 'FAILED')"
-echo "  $REMOTE_JSON"
-if echo "$REMOTE_JSON" | grep -q "\"build\":${BUILD}"; then
-  ok "Remote build ${BUILD} live"
-else
-  warn "Remote build mismatch or API unreachable — verify server manually"
-fi
-
-# ─── 6. Git tag + push ──────────────────────────────────────────────────────
+# ─── 4. Git tag + push ──────────────────────────────────────────────────────
 step "Git tag + push"
 git add mobile/pubspec.yaml
 git commit -m "chore(mobile): release ${VERSION}+${BUILD}" 2>/dev/null || warn "nothing to commit"
@@ -124,6 +91,12 @@ ok "Tagged v${VERSION}+${BUILD}"
 
 echo ""
 ok "Release ${VERSION}+${BUILD} complete"
+echo ""
 echo "  GitHub release: https://github.com/${REPO}/releases/tag/v${VERSION}%2B${BUILD}"
-echo "  APK download:    ${DL_URL}"
-echo "  Update check:    ${API_URL}/api/version → build ${BUILD}"
+echo "  APK download:    https://github.com/${REPO}/releases/latest/download/app-${ABI}-release.apk"
+echo ""
+warn "FINAL STEP (manual, ~30s):"
+echo "  Buka ${API_URL}/admin/settings/app-version"
+echo "  Isi: app_version=${VERSION}  app_build=${BUILD}"
+echo "  app_download_url=https://github.com/${REPO}/releases/latest/download/app-${ABI}-release.apk"
+echo "  Save. Lalu verify: curl ${API_URL}/api/version"
