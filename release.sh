@@ -1,18 +1,22 @@
 #!/bin/bash
 # DuitKita — Release orchestrator (run from project root on dev machine)
 #
-# Builds the release APK, uploads it to the server's storage/app/releases/,
-# flips app_settings to the new version/build, then tags + pushes git.
+# Builds the release APK, uploads it as a GitHub release, flips app_settings
+# on the server, then tags + pushes git.
+#
+# Requires: gh CLI authenticated, flutter, ssh access to server (for settings flip).
 #
 # Usage:
-#   bash release.sh                      # release current pubspec version
-#   bash release.sh 1.0.2                # bump pubspec to 1.0.2 first, then release
+#   bash release.sh                  # release current pubspec version
+#   bash release.sh 1.0.2            # bump pubspec to 1.0.2 first, then release
 #
 # Env (override in ~/.duitkita-release.env or shell):
 #   SSH_HOST   — e.g. root@duitkita.ikhsandi.web.id  (or a Host alias from ~/.ssh/config)
 #   APP_DIR    — server path to project     (default: /var/www/duitkita)
 #   API_URL    — public base URL, no /api   (default: https://duitkita.ikhsandi.web.id)
-#   SKIP_UPLOAD=1 — skip scp (APK already on server), only flip settings
+#   REPO       — GitHub repo slug           (default: Ikhsandi-Ramadani/duitkita)
+#   ABI        — target Android ABI         (default: arm64-v8a)
+#   SKIP_FLIP=1 — skip server settings update (only build + release + tag)
 
 set -euo pipefail
 
@@ -22,7 +26,8 @@ set -euo pipefail
 SSH_HOST="${SSH_HOST:-root@duitkita.ikhsandi.web.id}"
 APP_DIR="${APP_DIR:-/var/www/duitkita}"
 API_URL="${API_URL:-https://duitkita.ikhsandi.web.id}"
-ABI="${ABI:-arm64-v8a}"   # target Android ABI
+REPO="${REPO:-Ikhsandi-Ramadani/duitkita}"
+ABI="${ABI:-arm64-v8a}"
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 cya='\033[0;36m'; grn='\033[0;32m'; ylw='\033[0;33m'; rst='\033[0m'
@@ -40,7 +45,6 @@ if [ -n "${1:-}" ]; then
   NEW_VERSION="$1"
   NEW_BUILD="${NEW_BUILD:-$((BUILD+1))}"
   step "Bump pubspec → ${NEW_VERSION}+${NEW_BUILD}"
-  # cross-platform sed: write a temp file
   sed "s/^version: .*/version: ${NEW_VERSION}+${NEW_BUILD}/" mobile/pubspec.yaml > /tmp/_pubspec.yaml
   mv /tmp/_pubspec.yaml mobile/pubspec.yaml
   grep '^version:' mobile/pubspec.yaml
@@ -49,8 +53,7 @@ fi
 
 echo ""
 warn "About to release version=${VERSION} build=${BUILD}"
-warn "Server: ${SSH_HOST}  API: ${API_URL}"
-warn "APK ABI: ${ABI}"
+warn "Repo: ${REPO}  API: ${API_URL}  ABI: ${ABI}"
 read -rp "Proceed? [y/N] " confirm
 [ "$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 
@@ -68,51 +71,59 @@ APK="mobile/build/app/outputs/flutter-apk/app-${ABI}-release.apk"
 SIZE="$(ls -lh "$APK" | cut -d' ' -f5)"
 ok "Built $APK ($SIZE)"
 
-# ─── 3. Upload to server ────────────────────────────────────────────────────
-REMOTE_DIR="${APP_DIR}/backend/storage/app/releases"
-REMOTE_APK="${REMOTE_DIR}/duitkita-${VERSION}.apk"
-REMOTE_LATEST="${REMOTE_DIR}/duitkita-latest.apk"
+# ─── 3. GitHub release ──────────────────────────────────────────────────────
+step "Create GitHub release v${VERSION}+${BUILD} (upload ${ABI} APK)"
+ASSET_NAME="app-${ABI}-release.apk"
+# delete existing release with same tag if rerun
+gh release delete "v${VERSION}+${BUILD}" --repo "$REPO" --yes 2>/dev/null || true
+gh release create "v${VERSION}+${BUILD}" "$APK#$ASSET_NAME" \
+  --repo "$REPO" \
+  --title "DuitKita ${VERSION} (${BUILD})" \
+  --notes "Versi ${VERSION}+${BUILD}
 
-if [ "${SKIP_UPLOAD:-0}" = "1" ]; then
-  warn "SKIP_UPLOAD=1 — skipping scp"
-else
-  step "Upload to ${SSH_HOST}:${REMOTE_DIR}/"
-  ssh "$SSH_HOST" "mkdir -p '${REMOTE_DIR}' && chown -R www-data:www-data '${REMOTE_DIR}'"
-  scp "$APK" "${SSH_HOST}:${REMOTE_APK}"
-  ssh "$SSH_HOST" "cp '${REMOTE_APK}' '${REMOTE_LATEST}' && chown www-data:www-data '${REMOTE_APK}' '${REMOTE_LATEST}'"
-  ok "Uploaded duitkita-${VERSION}.apk + duitkita-latest.apk"
-fi
+- Download asset: \`$ASSET_NAME\`"
+ok "Release published: https://github.com/${REPO}/releases/tag/v${VERSION}%2B${BUILD}"
 
 # ─── 4. Flip app_settings on server ─────────────────────────────────────────
-step "Update app_settings → version=${VERSION} build=${BUILD}"
-ssh "$SSH_HOST" bash -s <<EOF
+DL_URL="https://github.com/${REPO}/releases/latest/download/app-${ABI}-release.apk"
+if [ "${SKIP_FLIP:-0}" = "1" ]; then
+  warn "SKIP_FLIP=1 — server settings not updated"
+else
+  step "Update app_settings → version=${VERSION} build=${BUILD}"
+  ssh "$SSH_HOST" bash -s <<EOF
 set -e
 cd ${APP_DIR}/backend
 php artisan tinker --execute="
   App\\\Models\\\AppSetting::set('app_version', '${VERSION}');
   App\\\Models\\\AppSetting::set('app_build', (string) ${BUILD});
-  App\\\Models\\\AppSetting::set('app_download_url', '${API_URL}/api/download/apk');
+  App\\\Models\\\AppSetting::set('app_download_url', '${DL_URL}');
 "
 php artisan config:clear
 EOF
-ok "app_settings updated"
+  ok "app_settings updated (download_url → ${DL_URL})"
+fi
 
 # ─── 5. Verify ───────────────────────────────────────────────────────────────
 step "Verify /api/version"
-REMOTE_JSON="$(curl -fsS "${API_URL}/api/version")"
+REMOTE_JSON="$(curl -fsS "${API_URL}/api/version" 2>/dev/null || echo 'FAILED')"
 echo "  $REMOTE_JSON"
-echo "$REMOTE_JSON" | grep -q "\"version\":\"${VERSION}\"" && ok "Remote version matches" || warn "Version mismatch — check server"
+if echo "$REMOTE_JSON" | grep -q "\"build\":${BUILD}"; then
+  ok "Remote build ${BUILD} live"
+else
+  warn "Remote build mismatch or API unreachable — verify server manually"
+fi
 
 # ─── 6. Git tag + push ──────────────────────────────────────────────────────
-step "Git tag v${VERSION}+${BUILD}"
+step "Git tag + push"
 git add mobile/pubspec.yaml
-git commit -m "chore(mobile): release ${VERSION}+${BUILD}" || warn "nothing to commit"
+git commit -m "chore(mobile): release ${VERSION}+${BUILD}" 2>/dev/null || warn "nothing to commit"
 git tag -f "v${VERSION}+${BUILD}"
 git push origin main
-git push origin "v${VERSION}+${BUILD}" || true
+git push origin "v${VERSION}+${BUILD}" 2>/dev/null || true
 ok "Tagged v${VERSION}+${BUILD}"
 
 echo ""
 ok "Release ${VERSION}+${BUILD} complete"
-echo "  APK: ${API_URL}/api/download/apk"
-echo "  App update flow: /api/version → build ${BUILD} > installed → prompt"
+echo "  GitHub release: https://github.com/${REPO}/releases/tag/v${VERSION}%2B${BUILD}"
+echo "  APK download:    ${DL_URL}"
+echo "  Update check:    ${API_URL}/api/version → build ${BUILD}"
