@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/update_service.dart';
 import '../../data/providers.dart';
@@ -36,39 +37,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       final updateService = ref.read(updateServiceProvider);
       final update = await updateService.checkUpdate();
       if (update != null && mounted) {
-        await _showUpdateDialog(update);
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: !update.force,
+          builder: (_) => _UpdateDialog(
+            update: update,
+            updateService: updateService,
+          ),
+        );
       }
       if (mounted) context.go('/lock');
     });
-  }
-
-  Future<void> _showUpdateDialog(UpdateInfo update) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !update.force,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Update Tersedia 🎉'),
-        content: Text(
-          'Versi ${update.version} tersedia\n\n${update.notes}',
-        ),
-        actions: [
-          if (!update.force)
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Nanti'),
-            ),
-          FilledButton(
-            onPressed: () async {
-              await launchUrl(
-                Uri.parse(update.url),
-                mode: LaunchMode.externalApplication,
-              );
-            },
-            child: const Text('Update Sekarang'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -126,6 +105,111 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Update dialog — info -> in-app download with progress -> launch installer
+// ---------------------------------------------------------------------------
+
+enum _UpdateStage { info, downloading, error }
+
+class _UpdateDialog extends StatefulWidget {
+  const _UpdateDialog({required this.update, required this.updateService});
+  final UpdateInfo update;
+  final UpdateService updateService;
+
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  _UpdateStage _stage = _UpdateStage.info;
+  double _progress = 0;
+
+  Future<void> _startDownload() async {
+    setState(() {
+      _stage = _UpdateStage.downloading;
+      _progress = 0;
+    });
+
+    try {
+      final path = await widget.updateService.downloadApk(
+        widget.update.url,
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
+      if (!mounted) return;
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done && mounted) {
+        setState(() => _stage = _UpdateStage.error);
+        return;
+      }
+      // Installer is now showing over the app — close the dialog behind it.
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (kDebugMode) print('[Update] download error: $e');
+      if (mounted) setState(() => _stage = _UpdateStage.error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final update = widget.update;
+
+    return AlertDialog(
+      title: Text(_stage == _UpdateStage.info
+          ? 'Update Tersedia 🎉'
+          : _stage == _UpdateStage.downloading
+              ? 'Mengunduh Update…'
+              : 'Unduhan Gagal'),
+      content: switch (_stage) {
+        _UpdateStage.info => Text('Versi ${update.version} tersedia\n\n${update.notes}'),
+        _UpdateStage.downloading => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: _progress > 0 ? _progress : null,
+                  minHeight: 8,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text('${(_progress * 100).toStringAsFixed(0)}%'),
+            ],
+          ),
+        _UpdateStage.error => const Text(
+            'Gagal mengunduh update. Periksa koneksi internet dan coba lagi.'),
+      },
+      actions: switch (_stage) {
+        _UpdateStage.info => [
+            if (!update.force)
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Nanti'),
+              ),
+            FilledButton(
+              onPressed: _startDownload,
+              child: const Text('Update Sekarang'),
+            ),
+          ],
+        _UpdateStage.downloading => [],
+        _UpdateStage.error => [
+            if (!update.force)
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Nanti'),
+              ),
+            FilledButton(
+              onPressed: _startDownload,
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+      },
     );
   }
 }

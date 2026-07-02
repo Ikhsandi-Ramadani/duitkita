@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class UpdateInfo {
   final String version;
@@ -51,5 +54,27 @@ class UpdateService {
     } catch (_) {
       return null; // fail silently
     }
+  }
+
+  /// Downloads the APK at [url] to a local file, reporting 0.0-1.0 progress.
+  /// Returns the local file path on success.
+  Future<String> downloadApk(
+    String url, {
+    required void Function(double progress) onProgress,
+  }) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/duitkita-update.apk');
+
+    // Fresh Dio instance — the shared one carries auth headers/interceptors
+    // meant for the API host, not the (often third-party) download host.
+    final downloader = Dio();
+    await downloader.download(
+      url,
+      file.path,
+      onReceiveProgress: (received, total) {
+        if (total > 0) onProgress(received / total);
+      },
+    );
+    return file.path;
   }
 }
