@@ -92,6 +92,15 @@ final sessionRepoProvider = Provider<SessionRepository>((ref) {
   return SessionRepository(ref.watch(dbProvider));
 });
 
+/// Stable top-level provider for the biometric-lock toggle. Must NOT be
+/// created inline inside a widget's build() — that spawns a brand new
+/// provider instance every rebuild, which briefly resets to loading/false.
+final biometricEnabledProvider = StreamProvider<bool>((ref) {
+  return ref.watch(sessionRepoProvider).watch('biometricEnabled').map(
+        (v) => v == 'true',
+      );
+});
+
 final memberRepoProvider = Provider<MemberRepository>((ref) {
   return MemberRepository(ref.watch(dbProvider));
 });
@@ -255,11 +264,11 @@ final removeMemberProvider = Provider<Future<void> Function(int)>((ref) {
 // Background sync
 // ---------------------------------------------------------------------------
 
-/// Runs pushPending() then pull() once when watched.
+/// Runs pushAllPending() then pull() once when watched.
 /// Watch this in HomeScreen to trigger sync on every home mount.
 final backgroundSyncProvider = FutureProvider<void>((ref) async {
   final sync = ref.watch(syncServiceProvider);
-  await sync.pushPending();
+  await sync.pushAllPending();
   await sync.pull();
 });
 

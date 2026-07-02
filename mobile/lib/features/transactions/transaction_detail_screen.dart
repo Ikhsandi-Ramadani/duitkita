@@ -86,6 +86,7 @@ class _TransactionDetailScreenState
         AppToast.show(context, 'Struk berhasil diunggah');
       }
     } catch (e) {
+      if (kDebugMode) print('[TransactionDetail] receipt upload error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal mengunggah struk', success: false);
       }
@@ -545,8 +546,8 @@ class _ReceiptSection extends StatelessWidget {
     showDialog<void>(
       context: context,
       barrierColor: Colors.black87,
-      builder: (_) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
+      builder: (dialogContext) => GestureDetector(
+        onTap: () => Navigator.of(dialogContext).pop(),
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Center(

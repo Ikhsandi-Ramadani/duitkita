@@ -69,16 +69,87 @@ class SyncService {
             })
         .toList();
 
-    final result = await api.pushTransactions(payload);
+    try {
+      final result = await api.pushTransactions(payload);
 
-    // Server returns synced list with server IDs
-    final synced = (result['synced'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    for (final s in synced) {
-      await txRepo.markSynced(
-        s['client_id'] as String,
-        s['server_id'] as int,
-      );
+      // Server returns {'results': [{'client_id', 'status', 'id'}, ...]}
+      final results = (result['results'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      for (final r in results) {
+        await txRepo.markSynced(
+          r['client_id'] as String,
+          r['id'] as int,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) print('[Sync] pushTransactions error: $e');
     }
+  }
+
+  /// Push all pending (pendingSync=true) debts to the server.
+  Future<void> pushPendingDebts() async {
+    final pending = await debtRepo.getPendingSync();
+    for (final d in pending) {
+      try {
+        final result = await api.createDebt({
+          'type': d.type,
+          'party_name': d.partyName,
+          'amount': d.amount,
+          'date': d.date.toIso8601String(),
+          'due_date': d.dueDate?.toIso8601String(),
+          'note': d.note,
+          'wallet_id': d.walletId,
+        });
+        final serverId = (result['data'] as Map<String, dynamic>?)?['id'] as int?;
+        if (serverId != null) {
+          await debtRepo.replaceWithServerId(d.id, serverId);
+        }
+      } catch (e) {
+        if (kDebugMode) print('[Sync] debt push error (id=${d.id}): $e');
+      }
+    }
+  }
+
+  /// Push all pending (pendingSync=true) recurring rules to the server.
+  Future<void> pushPendingRecurrings() async {
+    final pending = await recurringRepo.getPendingSync();
+    for (final r in pending) {
+      try {
+        final result = await api.createRecurring({
+          'type': r.type,
+          'wallet_id': r.walletId,
+          'category_id': r.categoryId,
+          'amount': r.amount,
+          'freq': r.freq,
+          'next_run_date': r.nextRunDate.toIso8601String(),
+          'end_date': r.endDate?.toIso8601String(),
+          'auto_create': r.autoCreate,
+          'note': r.note,
+        });
+        final serverId = (result['data'] as Map<String, dynamic>?)?['id'] as int?;
+        if (serverId != null) {
+          await recurringRepo.replaceWithServerId(r.id, serverId);
+        }
+      } catch (e) {
+        if (kDebugMode) print('[Sync] recurring push error (id=${r.id}): $e');
+      }
+    }
+  }
+
+  /// Best-effort push of every locally-created entity not yet on the server.
+  Future<void> pushAllPending() async {
+    await pushPending();
+    await pushPendingDebts();
+    await pushPendingRecurrings();
+  }
+
+  /// True if any entity still has unsynced local writes.
+  Future<bool> hasPendingSync() async {
+    final tx = await txRepo.getPendingSync();
+    if (tx.isNotEmpty) return true;
+    final debts = await debtRepo.getPendingSync();
+    if (debts.isNotEmpty) return true;
+    final recs = await recurringRepo.getPendingSync();
+    return recs.isNotEmpty;
   }
 
   /// Pull all entity updates from server since [lastSyncAt].
@@ -88,9 +159,7 @@ class SyncService {
 
     final data = await api.pullSince(lastSync);
     await _upsertAll(data);
-
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    await sessionRepo.set('lastSyncAt', nowMs.toString());
+    await _recordSyncTime(data);
   }
 
   /// Full initial pull: fetch /me + /sync?since=0.
@@ -105,8 +174,17 @@ class SyncService {
       await sessionRepo.setCurrentUserId(userId);
     }
 
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    await sessionRepo.set('lastSyncAt', nowMs.toString());
+    await _recordSyncTime(syncData);
+  }
+
+  /// Records the server's clock (not the device's) as the sync watermark,
+  /// avoiding skipped records from device clock skew.
+  Future<void> _recordSyncTime(Map<String, dynamic> data) async {
+    final serverTimeStr = data['server_time'] as String?;
+    final ms = serverTimeStr != null
+        ? DateTime.parse(serverTimeStr).millisecondsSinceEpoch
+        : DateTime.now().millisecondsSinceEpoch;
+    await sessionRepo.set('lastSyncAt', ms.toString());
   }
 
   Future<void> _upsertAll(Map<String, dynamic> data) async {
@@ -267,6 +345,7 @@ class SyncService {
                   note: Value(d['note'] as String?),
                   walletId: Value(d['wallet_id'] as int?),
                   deleted: Value((d['deleted'] as bool?) ?? false),
+                  pendingSync: const Value(false),
                 ))
             .toList());
       } catch (e) {
@@ -293,6 +372,7 @@ class SyncService {
                   autoCreate: Value((r['auto_create'] as bool?) ?? false),
                   note: Value(r['note'] as String?),
                   createdBy: Value(_toInt(r['created_by'])),
+                  pendingSync: const Value(false),
                 ))
             .toList());
       } catch (e) {

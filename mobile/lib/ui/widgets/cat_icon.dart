@@ -18,10 +18,14 @@ class CatIcon extends StatelessWidget {
   final double? iconSize;
 
   static IconData iconFor(String key) {
-    return _iconMap[key] ?? Icons.more_horiz_rounded;
+    return iconMap[key] ?? Icons.more_horiz_rounded;
   }
 
-  static const _iconMap = <String, IconData>{
+  /// Single source of truth for category/wallet/goal icon keys.
+  /// Used both to render icons here and to populate icon pickers
+  /// (e.g. categories_screen.dart) — keep in sync so a key picked
+  /// there always resolves to a real icon everywhere else.
+  static const iconMap = <String, IconData>{
     'utensils': Icons.restaurant_rounded,
     'car': Icons.directions_car_outlined,
     'fuel': Icons.local_gas_station_outlined,
@@ -43,6 +47,25 @@ class CatIcon extends StatelessWidget {
     'payments': Icons.payments_outlined,
     'account_balance_wallet': Icons.account_balance_wallet_outlined,
     'shopping_cart': Icons.shopping_cart_outlined,
+    'restaurant': Icons.restaurant_outlined,
+    'directions_car': Icons.directions_car_outlined,
+    'local_hospital': Icons.local_hospital_outlined,
+    'school': Icons.school_outlined,
+    'home': Icons.home_outlined,
+    'flight': Icons.flight_outlined,
+    'sports_esports': Icons.sports_esports_outlined,
+    'checkroom': Icons.checkroom_outlined,
+    'bolt': Icons.bolt_outlined,
+    'savings': Icons.savings_outlined,
+    'work': Icons.work_outline_rounded,
+    'card_giftcard': Icons.card_giftcard_outlined,
+    'fitness_center': Icons.fitness_center_outlined,
+    'pets': Icons.pets_outlined,
+    'attach_money': Icons.attach_money_rounded,
+    'business_center': Icons.business_center_outlined,
+    'coffee': Icons.coffee_outlined,
+    'phone_android': Icons.phone_android_outlined,
+    'build': Icons.build_outlined,
   };
 
   @override

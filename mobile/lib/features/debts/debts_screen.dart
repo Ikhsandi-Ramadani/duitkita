@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/utils/format.dart';
 import '../../data/db/app_database.dart';
@@ -424,15 +425,8 @@ class _AddDebtSheetState extends State<_AddDebtSheet> {
   final _noteCtrl = TextEditingController();
   String _type = 'payable';
   int _amount = 0;
-  int? _dueDays;
+  DateTime? _dueDate;
   int? _walletId;
-
-  static const _dueOptions = [
-    (value: 7, label: '1 mg'),
-    (value: 14, label: '2 mg'),
-    (value: 30, label: '1 bln'),
-    (value: 90, label: '3 bln'),
-  ];
 
   bool get _canSave =>
       _partyCtrl.text.trim().isNotEmpty && _amount > 0;
@@ -444,11 +438,20 @@ class _AddDebtSheetState extends State<_AddDebtSheet> {
     super.dispose();
   }
 
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? now,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 10),
+    );
+    if (picked != null) setState(() => _dueDate = picked);
+  }
+
   Future<void> _save() async {
     if (!_canSave) return;
     final now = DateTime.now();
-    final dueDate =
-        _dueDays != null ? now.add(Duration(days: _dueDays!)) : null;
     final pseudoId = now.millisecondsSinceEpoch % 2147483647;
     final userId = widget.ref.read(currentUserIdProvider).value;
     if (userId == null) return;
@@ -462,12 +465,13 @@ class _AddDebtSheetState extends State<_AddDebtSheet> {
             amount: _amount,
             paid: 0,
             date: now,
-            dueDate: Value(dueDate),
+            dueDate: Value(_dueDate),
             status: 'active',
             note: Value(_noteCtrl.text.trim().isNotEmpty
                 ? _noteCtrl.text.trim()
                 : null),
             walletId: Value(_walletId),
+            pendingSync: const Value(true),
           ),
         );
 
@@ -522,11 +526,40 @@ class _AddDebtSheetState extends State<_AddDebtSheet> {
             onChanged: (v) => setState(() => _amount = v),
           ),
           const SizedBox(height: 14),
-          ChipRow<int>(
-            label: 'Jatuh Tempo',
-            items: _dueOptions,
-            selected: _dueDays,
-            onSelected: (v) => setState(() => _dueDays = v),
+          Text('Jatuh Tempo (opsional)',
+              style: AppText.label(color: colors.text2)),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: _pickDueDate,
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                color: colors.surface2,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.event_outlined, size: 18, color: colors.text3),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _dueDate != null ? dayLabel(_dueDate!) : 'Pilih tanggal',
+                      style: AppText.body(
+                          color: _dueDate != null ? colors.text : colors.text3),
+                    ),
+                  ),
+                  if (_dueDate != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _dueDate = null),
+                      child: Icon(Icons.close_rounded,
+                          size: 18, color: colors.text3),
+                    ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 14),
           Text('Dompet Terkait', style: AppText.label(color: colors.text2)),

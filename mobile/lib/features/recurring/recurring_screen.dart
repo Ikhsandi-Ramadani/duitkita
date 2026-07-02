@@ -471,6 +471,7 @@ class _AddRecurringSheetState extends State<_AddRecurringSheet> {
                 ? _noteCtrl.text.trim()
                 : null),
             createdBy: uid,
+            pendingSync: const Value(true),
           ),
         );
 

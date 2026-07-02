@@ -33,6 +33,41 @@ class DebtRepository {
     });
   }
 
+  Future<List<Debt>> getPendingSync() {
+    return (_db.select(_db.debts)..where((t) => t.pendingSync.equals(true)))
+        .get();
+  }
+
+  /// Replaces a locally-created row (pseudo id) with the server-assigned id
+  /// once the debt has been pushed successfully.
+  Future<void> replaceWithServerId(int localId, int serverId) async {
+    if (localId == serverId) {
+      await (_db.update(_db.debts)..where((t) => t.id.equals(localId)))
+          .write(const DebtsCompanion(pendingSync: Value(false)));
+      return;
+    }
+    final row = await getById(localId);
+    if (row == null) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.debts)..where((t) => t.id.equals(localId))).go();
+      await _db.into(_db.debts).insertOnConflictUpdate(DebtsCompanion.insert(
+            id: Value(serverId),
+            ownerUserId: Value(row.ownerUserId),
+            type: row.type,
+            partyName: row.partyName,
+            amount: row.amount,
+            paid: row.paid,
+            date: row.date,
+            dueDate: Value(row.dueDate),
+            status: row.status,
+            note: Value(row.note),
+            walletId: Value(row.walletId),
+            deleted: Value(row.deleted),
+            pendingSync: const Value(false),
+          ));
+    });
+  }
+
   /// Pay [amount] toward debt [debtId] using [walletId].
   /// payable → creates expense transaction (money leaves wallet).
   /// receivable → creates income transaction (money enters wallet).

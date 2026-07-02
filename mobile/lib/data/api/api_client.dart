@@ -140,6 +140,16 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> createDebt(Map<String, dynamic> data) async {
+    final res = await _dio.post('/debts', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createRecurring(Map<String, dynamic> data) async {
+    final res = await _dio.post('/recurrings', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> pullSince(int sinceTimestamp) async {
     final res = await _dio.get('/sync', queryParameters: {'since': sinceTimestamp});
     return res.data as Map<String, dynamic>;

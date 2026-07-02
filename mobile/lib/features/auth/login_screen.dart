@@ -198,10 +198,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final inviteCode = data['household']?['invite_code'] as String?;
       if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
 
+      // Push any offline writes from a previous session before wiping local
+      // data — otherwise unsynced transactions/debts/recurrings are lost.
+      final syncService = ref.read(syncServiceProvider);
+      await syncService.pushAllPending();
+      if (await syncService.hasPendingSync()) {
+        setState(() {
+          _loading = false;
+          _error = 'Ada data belum tersinkron (cek koneksi internet), '
+              'login dibatalkan supaya data tidak hilang. Coba lagi saat online.';
+        });
+        return;
+      }
+
       // Clear stale local data, then pull fresh from server
       await ref.read(dbProvider).clearAll();
       try {
-        await ref.read(syncServiceProvider).initialPull();
+        await syncService.initialPull();
       } on DioException catch (syncErr) {
         final syncMsg = syncErr.response?.data is Map
             ? (syncErr.response!.data['message'] as String?)
@@ -242,6 +255,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _onDemoLogin() async {
     setState(() {_loading = true; _error = null;});
     final db = ref.read(dbProvider);
+    // Best-effort: push any unsynced data from a previous real account
+    // before wiping local storage for demo mode.
+    try {
+      await ref.read(syncServiceProvider).pushAllPending();
+    } catch (_) {
+      // Demo mode proceeds regardless — this is just a courtesy flush.
+    }
+    // Wipe any previous account's local data so demo mode never shows
+    // someone else's real transactions/debts/recurrings.
+    await db.clearAll();
     // Delete existing session data and re-seed
     await db.delete(db.sessionKv).go();
     // Clear any stale auth token so API calls don't use a real session

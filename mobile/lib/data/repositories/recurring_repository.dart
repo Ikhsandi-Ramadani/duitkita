@@ -20,4 +20,47 @@ class RecurringRepository {
       }
     });
   }
+
+  Future<Recurring?> getById(int id) {
+    return (_db.select(_db.recurrings)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  Future<List<Recurring>> getPendingSync() {
+    return (_db.select(_db.recurrings)
+          ..where((t) => t.pendingSync.equals(true)))
+        .get();
+  }
+
+  /// Replaces a locally-created row (pseudo id) with the server-assigned id
+  /// once the recurring rule has been pushed successfully.
+  Future<void> replaceWithServerId(int localId, int serverId) async {
+    if (localId == serverId) {
+      await (_db.update(_db.recurrings)..where((t) => t.id.equals(localId)))
+          .write(const RecurringsCompanion(pendingSync: Value(false)));
+      return;
+    }
+    final row = await getById(localId);
+    if (row == null) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.recurrings)..where((t) => t.id.equals(localId)))
+          .go();
+      await _db.into(_db.recurrings).insertOnConflictUpdate(
+            RecurringsCompanion.insert(
+              id: Value(serverId),
+              type: row.type,
+              walletId: row.walletId,
+              categoryId: row.categoryId,
+              amount: row.amount,
+              freq: row.freq,
+              nextRunDate: row.nextRunDate,
+              endDate: Value(row.endDate),
+              autoCreate: row.autoCreate,
+              note: Value(row.note),
+              createdBy: row.createdBy,
+              pendingSync: const Value(false),
+            ),
+          );
+    });
+  }
 }

@@ -122,6 +122,7 @@ class Debts extends Table {
   TextColumn get note => text().nullable()();
   IntColumn get walletId => integer().nullable()();
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+  BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -142,6 +143,7 @@ class Recurrings extends Table {
   BoolColumn get autoCreate => boolean()();
   TextColumn get note => text().nullable()();
   IntColumn get createdBy => integer()();
+  BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,33 +11,7 @@ import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
 import '../../ui/widgets/app_sheet.dart';
 import '../../ui/widgets/app_toast.dart';
-
-// ---------------------------------------------------------------------------
-// Icon options for picker
-// ---------------------------------------------------------------------------
-
-const _kIconOptions = <String, IconData>{
-  'shopping_cart': Icons.shopping_cart_outlined,
-  'restaurant': Icons.restaurant_outlined,
-  'directions_car': Icons.directions_car_outlined,
-  'local_hospital': Icons.local_hospital_outlined,
-  'school': Icons.school_outlined,
-  'home': Icons.home_outlined,
-  'flight': Icons.flight_outlined,
-  'sports_esports': Icons.sports_esports_outlined,
-  'checkroom': Icons.checkroom_outlined,
-  'bolt': Icons.bolt_outlined,
-  'savings': Icons.savings_outlined,
-  'work': Icons.work_outline_rounded,
-  'card_giftcard': Icons.card_giftcard_outlined,
-  'fitness_center': Icons.fitness_center_outlined,
-  'pets': Icons.pets_outlined,
-  'attach_money': Icons.attach_money_rounded,
-  'business_center': Icons.business_center_outlined,
-  'coffee': Icons.coffee_outlined,
-  'phone_android': Icons.phone_android_outlined,
-  'build': Icons.build_outlined,
-};
+import '../../ui/widgets/cat_icon.dart';
 
 // ---------------------------------------------------------------------------
 // Provider — async create/delete backed by API + local DB
@@ -256,7 +231,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
     final colors = context.appColors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -268,13 +243,13 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text('Batal',
                 style: AppText.body(color: colors.text2)
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text('Hapus',
                 style: AppText.body(color: colors.expense)
                     .copyWith(fontWeight: FontWeight.w700)),
@@ -291,6 +266,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
           AppToast.show(context, '"${widget.category.name}" dihapus');
         }
       } catch (e) {
+        if (kDebugMode) print('[Categories] delete error: $e');
         if (mounted) {
           setState(() => _deleting = false);
           AppToast.show(context, 'Gagal menghapus. Coba lagi.');
@@ -306,7 +282,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
     final hueColor =
         HSLColor.fromAHSL(1, cat.hue.toDouble(), 0.65, 0.50).toColor();
     final iconData =
-        _kIconOptions[cat.icon] ?? Icons.label_outline_rounded;
+        CatIcon.iconMap[cat.icon] ?? Icons.label_outline_rounded;
 
     return Dismissible(
       key: ValueKey(cat.id),
@@ -511,7 +487,7 @@ class _AddCategorySheetState extends ConsumerState<_AddCategorySheet> {
     final previewHue =
         HSLColor.fromAHSL(1, _selectedHue, 0.65, 0.50).toColor();
     final previewIcon =
-        _kIconOptions[_selectedIcon] ?? Icons.label_outline_rounded;
+        CatIcon.iconMap[_selectedIcon] ?? Icons.label_outline_rounded;
 
     return SingleChildScrollView(
       padding: EdgeInsets.only(
@@ -599,7 +575,7 @@ class _AddCategorySheetState extends ConsumerState<_AddCategorySheet> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: _kIconOptions.entries.map((entry) {
+            children: CatIcon.iconMap.entries.map((entry) {
               final isSelected = _selectedIcon == entry.key;
               final hueColor = HSLColor.fromAHSL(
                       1, _selectedHue, 0.65, 0.50)

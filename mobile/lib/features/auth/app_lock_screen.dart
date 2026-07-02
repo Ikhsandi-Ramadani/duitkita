@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
+import '../../ui/widgets/app_toast.dart';
 import '../../ui/widgets/member_avatar.dart';
 
 class AppLockScreen extends ConsumerStatefulWidget {
@@ -170,11 +171,22 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   Future<void> _onBiometric() async {
     try {
       final isSupported = await _localAuth.isDeviceSupported();
-      if (!isSupported) return;
+      if (!isSupported) {
+        if (mounted) AppToast.show(context, 'HP ini tidak mendukung biometrik');
+        return;
+      }
       final canCheck = await _localAuth.canCheckBiometrics;
-      if (!canCheck) return;
+      if (!canCheck) {
+        if (mounted) AppToast.show(context, 'Biometrik tidak aktif di pengaturan HP');
+        return;
+      }
       final available = await _localAuth.getAvailableBiometrics();
-      if (available.isEmpty) return;
+      if (available.isEmpty) {
+        if (mounted) {
+          AppToast.show(context, 'Belum ada sidik jari/wajah terdaftar di HP');
+        }
+        return;
+      }
       final ok = await _localAuth.authenticate(
         localizedReason: 'Gunakan biometrik untuk masuk ke DuitKita',
       );
@@ -183,6 +195,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       }
     } catch (e) {
       if (kDebugMode) print('[Biometric] error: $e');
+      if (mounted) AppToast.show(context, 'Gagal membuka biometrik. Coba lagi.');
     }
   }
 }

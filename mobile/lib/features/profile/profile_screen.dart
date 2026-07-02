@@ -203,7 +203,7 @@ class ProfileScreen extends ConsumerWidget {
     final colors = context.appColors;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -226,7 +226,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text('Tutup',
                 style: AppText.body(color: colors.primary)
                     .copyWith(fontWeight: FontWeight.w600)),
@@ -656,14 +656,7 @@ class _BiometricToggle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
-    final biometricAsync = ref.watch(
-      StreamProvider.autoDispose<bool>(
-        (ref) => ref
-            .watch(sessionRepoProvider)
-            .watch('biometricEnabled')
-            .map((v) => v == 'true'),
-      ),
-    );
+    final biometricAsync = ref.watch(biometricEnabledProvider);
     final enabled = biometricAsync.value ?? false;
 
     return Switch(
@@ -856,7 +849,7 @@ class _RemoveButtonState extends State<_RemoveButton> {
     final colors = context.appColors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -870,13 +863,13 @@ class _RemoveButtonState extends State<_RemoveButton> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text('Batal',
                 style: AppText.body(color: colors.text2)
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text('Hapus',
                 style: AppText.body(color: colors.expense)
                     .copyWith(fontWeight: FontWeight.w700)),

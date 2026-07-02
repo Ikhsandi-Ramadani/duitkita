@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -222,6 +223,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         context.pop();
       }
     } catch (e) {
+      if (kDebugMode) print('[AddTransaction] save error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal menyimpan transaksi', success: false);
       }

@@ -22,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'duitkita'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,6 +30,10 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(notifications);
+          }
+          if (from < 3) {
+            await m.addColumn(debts, debts.pendingSync);
+            await m.addColumn(recurrings, recurrings.pendingSync);
           }
         },
       );
