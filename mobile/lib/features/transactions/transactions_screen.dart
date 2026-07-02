@@ -381,6 +381,7 @@ class _DayGroup extends StatelessWidget {
                             onTap: () => onTapTx(tx.clientId),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         // Time
                         Text(
                           timeLabel(tx.date),

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -245,18 +246,30 @@ class _RecurringCardState extends State<_RecurringCard> {
       if (mounted) {
         AppToast.show(context, 'Transaksi dicatat');
       }
+    } catch (e) {
+      if (kDebugMode) print('[Recurring] recordNow error: $e');
+      if (mounted) {
+        AppToast.show(context, 'Gagal mencatat transaksi', success: false);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _toggleAuto(bool value) async {
-    await widget.ref.read(recurringRepoProvider).upsert(
-          RecurringsCompanion(
-            id: Value(widget.recurring.id),
-            autoCreate: Value(value),
-          ),
-        );
+    try {
+      await widget.ref.read(recurringRepoProvider).upsert(
+            RecurringsCompanion(
+              id: Value(widget.recurring.id),
+              autoCreate: Value(value),
+            ),
+          );
+    } catch (e) {
+      if (kDebugMode) print('[Recurring] toggleAuto error: $e');
+      if (mounted) {
+        AppToast.show(context, 'Gagal mengubah pengaturan', success: false);
+      }
+    }
   }
 
   @override

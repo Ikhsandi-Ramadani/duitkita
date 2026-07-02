@@ -60,11 +60,11 @@ class SyncService {
               'target_wallet_id': t.targetWalletId,
               'category_id': t.categoryId,
               'amount': t.amount,
-              'date': t.date.toIso8601String(),
+              'date': t.date.toUtc().toIso8601String(),
               'note': t.note,
               'recorded_by': t.recordedBy,
               'spent_by': t.spentBy,
-              'updated_at': t.updatedAt.toIso8601String(),
+              'updated_at': t.updatedAt.toUtc().toIso8601String(),
               'deleted': t.deleted,
             })
         .toList();
@@ -94,8 +94,8 @@ class SyncService {
           'type': d.type,
           'party_name': d.partyName,
           'amount': d.amount,
-          'date': d.date.toIso8601String(),
-          'due_date': d.dueDate?.toIso8601String(),
+          'date': d.date.toUtc().toIso8601String(),
+          'due_date': d.dueDate?.toUtc().toIso8601String(),
           'note': d.note,
           'wallet_id': d.walletId,
         });
@@ -120,8 +120,8 @@ class SyncService {
           'category_id': r.categoryId,
           'amount': r.amount,
           'freq': r.freq,
-          'next_run_date': r.nextRunDate.toIso8601String(),
-          'end_date': r.endDate?.toIso8601String(),
+          'next_run_date': r.nextRunDate.toUtc().toIso8601String(),
+          'end_date': r.endDate?.toUtc().toIso8601String(),
           'auto_create': r.autoCreate,
           'note': r.note,
         });
@@ -287,12 +287,12 @@ class SyncService {
               targetWalletId: Value(t['target_wallet_id'] as int?),
               categoryId: Value(t['category_id'] as int?),
               amount: Value(_toInt(t['amount'])),
-              date: Value(DateTime.parse((t['date'] as String?) ?? DateTime.now().toIso8601String())),
+              date: Value(DateTime.parse((t['date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
               note: Value(t['note'] as String?),
               recordedBy: Value(_toInt(t['recorded_by'])),
               spentBy: Value(t['spent_by'] as int?),
               receiptPath: Value(t['receipt_path'] as String?),
-              updatedAt: Value(DateTime.parse((t['updated_at'] as String?) ?? DateTime.now().toIso8601String())),
+              updatedAt: Value(DateTime.parse((t['updated_at'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
               deleted: Value((t['deleted'] as bool?) ?? false),
               pendingSync: const Value(false),
             ));
@@ -339,7 +339,7 @@ class SyncService {
                   targetAmount: Value(_toInt(g['target_amount'])),
                   currentAmount: Value(_toInt(g['current_amount'])),
                   targetDate: Value(g['target_date'] != null
-                      ? DateTime.parse(g['target_date'] as String)
+                      ? DateTime.parse(g['target_date'] as String).toLocal()
                       : null),
                   walletId: Value(_toInt(g['wallet_id'])),
                   icon: Value((g['icon'] as String?) ?? ''),
@@ -364,9 +364,9 @@ class SyncService {
                   partyName: Value((d['party_name'] as String?) ?? ''),
                   amount: Value(_toInt(d['amount'])),
                   paid: Value(_toInt(d['paid'])),
-                  date: Value(DateTime.parse((d['date'] as String?) ?? DateTime.now().toIso8601String())),
+                  date: Value(DateTime.parse((d['date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
                   dueDate: Value(d['due_date'] != null
-                      ? DateTime.parse(d['due_date'] as String)
+                      ? DateTime.parse(d['due_date'] as String).toLocal()
                       : null),
                   status: Value((d['status'] as String?) ?? 'ongoing'),
                   note: Value(d['note'] as String?),
@@ -392,9 +392,9 @@ class SyncService {
                   categoryId: Value(_toInt(r['category_id'])),
                   amount: Value(_toInt(r['amount'])),
                   freq: Value((r['freq'] as String?) ?? 'monthly'),
-                  nextRunDate: Value(DateTime.parse((r['next_run_date'] as String?) ?? DateTime.now().toIso8601String())),
+                  nextRunDate: Value(DateTime.parse((r['next_run_date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
                   endDate: Value(r['end_date'] != null
-                      ? DateTime.parse(r['end_date'] as String)
+                      ? DateTime.parse(r['end_date'] as String).toLocal()
                       : null),
                   autoCreate: Value((r['auto_create'] as bool?) ?? false),
                   note: Value(r['note'] as String?),
