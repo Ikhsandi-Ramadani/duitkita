@@ -135,11 +135,33 @@ class SyncService {
     }
   }
 
+  /// Push all pending (pendingSync=true) budgets to the server.
+  Future<void> pushPendingBudgets() async {
+    final pending = await budgetRepo.getPendingSync();
+    for (final b in pending) {
+      try {
+        final result = await api.createBudget({
+          'scope': b.scope,
+          'category_id': b.categoryId,
+          'amount': b.amount,
+          'period_month': b.periodMonth,
+        });
+        final serverId = result['id'] as int?;
+        if (serverId != null) {
+          await budgetRepo.replaceWithServerId(b.id, serverId);
+        }
+      } catch (e) {
+        if (kDebugMode) print('[Sync] budget push error (id=${b.id}): $e');
+      }
+    }
+  }
+
   /// Best-effort push of every locally-created entity not yet on the server.
   Future<void> pushAllPending() async {
     await pushPending();
     await pushPendingDebts();
     await pushPendingRecurrings();
+    await pushPendingBudgets();
   }
 
   /// True if any entity still has unsynced local writes.
@@ -149,7 +171,9 @@ class SyncService {
     final debts = await debtRepo.getPendingSync();
     if (debts.isNotEmpty) return true;
     final recs = await recurringRepo.getPendingSync();
-    return recs.isNotEmpty;
+    if (recs.isNotEmpty) return true;
+    final budgets = await budgetRepo.getPendingSync();
+    return budgets.isNotEmpty;
   }
 
   /// Pull all entity updates from server since [lastSyncAt].
@@ -293,6 +317,7 @@ class SyncService {
                   categoryId: Value(_toInt(b['category_id'])),
                   amount: Value(_toInt(b['amount'])),
                   periodMonth: Value((b['period_month'] as String?) ?? ''),
+                  pendingSync: const Value(false),
                 ))
             .toList());
       } catch (e) {

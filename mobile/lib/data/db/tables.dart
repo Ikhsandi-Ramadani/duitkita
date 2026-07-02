@@ -83,6 +83,7 @@ class Budgets extends Table {
   IntColumn get categoryId => integer()();
   IntColumn get amount => integer()();
   TextColumn get periodMonth => text()(); // YYYY-MM
+  BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

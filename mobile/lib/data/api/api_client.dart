@@ -165,6 +165,11 @@ class ApiClient {
   // Budget endpoints
   // -------------------------------------------------------------------------
 
+  Future<Map<String, dynamic>> createBudget(Map<String, dynamic> body) async {
+    final res = await _dio.post('/budgets', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<void> deleteBudget(int id) async {
     await _dio.delete('/budgets/$id');
   }

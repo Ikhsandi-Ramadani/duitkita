@@ -2312,6 +2312,21 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _pendingSyncMeta = const VerificationMeta(
+    'pendingSync',
+  );
+  @override
+  late final GeneratedColumn<bool> pendingSync = GeneratedColumn<bool>(
+    'pending_sync',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pending_sync" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2320,6 +2335,7 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     categoryId,
     amount,
     periodMonth,
+    pendingSync,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2380,6 +2396,15 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     } else if (isInserting) {
       context.missing(_periodMonthMeta);
     }
+    if (data.containsKey('pending_sync')) {
+      context.handle(
+        _pendingSyncMeta,
+        pendingSync.isAcceptableOrUnknown(
+          data['pending_sync']!,
+          _pendingSyncMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2413,6 +2438,10 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
         DriftSqlType.string,
         data['${effectivePrefix}period_month'],
       )!,
+      pendingSync: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pending_sync'],
+      )!,
     );
   }
 
@@ -2429,6 +2458,7 @@ class Budget extends DataClass implements Insertable<Budget> {
   final int categoryId;
   final int amount;
   final String periodMonth;
+  final bool pendingSync;
   const Budget({
     required this.id,
     required this.scope,
@@ -2436,6 +2466,7 @@ class Budget extends DataClass implements Insertable<Budget> {
     required this.categoryId,
     required this.amount,
     required this.periodMonth,
+    required this.pendingSync,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2448,6 +2479,7 @@ class Budget extends DataClass implements Insertable<Budget> {
     map['category_id'] = Variable<int>(categoryId);
     map['amount'] = Variable<int>(amount);
     map['period_month'] = Variable<String>(periodMonth);
+    map['pending_sync'] = Variable<bool>(pendingSync);
     return map;
   }
 
@@ -2461,6 +2493,7 @@ class Budget extends DataClass implements Insertable<Budget> {
       categoryId: Value(categoryId),
       amount: Value(amount),
       periodMonth: Value(periodMonth),
+      pendingSync: Value(pendingSync),
     );
   }
 
@@ -2476,6 +2509,7 @@ class Budget extends DataClass implements Insertable<Budget> {
       categoryId: serializer.fromJson<int>(json['categoryId']),
       amount: serializer.fromJson<int>(json['amount']),
       periodMonth: serializer.fromJson<String>(json['periodMonth']),
+      pendingSync: serializer.fromJson<bool>(json['pendingSync']),
     );
   }
   @override
@@ -2488,6 +2522,7 @@ class Budget extends DataClass implements Insertable<Budget> {
       'categoryId': serializer.toJson<int>(categoryId),
       'amount': serializer.toJson<int>(amount),
       'periodMonth': serializer.toJson<String>(periodMonth),
+      'pendingSync': serializer.toJson<bool>(pendingSync),
     };
   }
 
@@ -2498,6 +2533,7 @@ class Budget extends DataClass implements Insertable<Budget> {
     int? categoryId,
     int? amount,
     String? periodMonth,
+    bool? pendingSync,
   }) => Budget(
     id: id ?? this.id,
     scope: scope ?? this.scope,
@@ -2505,6 +2541,7 @@ class Budget extends DataClass implements Insertable<Budget> {
     categoryId: categoryId ?? this.categoryId,
     amount: amount ?? this.amount,
     periodMonth: periodMonth ?? this.periodMonth,
+    pendingSync: pendingSync ?? this.pendingSync,
   );
   Budget copyWithCompanion(BudgetsCompanion data) {
     return Budget(
@@ -2520,6 +2557,9 @@ class Budget extends DataClass implements Insertable<Budget> {
       periodMonth: data.periodMonth.present
           ? data.periodMonth.value
           : this.periodMonth,
+      pendingSync: data.pendingSync.present
+          ? data.pendingSync.value
+          : this.pendingSync,
     );
   }
 
@@ -2531,14 +2571,22 @@ class Budget extends DataClass implements Insertable<Budget> {
           ..write('ownerUserId: $ownerUserId, ')
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
-          ..write('periodMonth: $periodMonth')
+          ..write('periodMonth: $periodMonth, ')
+          ..write('pendingSync: $pendingSync')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, scope, ownerUserId, categoryId, amount, periodMonth);
+  int get hashCode => Object.hash(
+    id,
+    scope,
+    ownerUserId,
+    categoryId,
+    amount,
+    periodMonth,
+    pendingSync,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2548,7 +2596,8 @@ class Budget extends DataClass implements Insertable<Budget> {
           other.ownerUserId == this.ownerUserId &&
           other.categoryId == this.categoryId &&
           other.amount == this.amount &&
-          other.periodMonth == this.periodMonth);
+          other.periodMonth == this.periodMonth &&
+          other.pendingSync == this.pendingSync);
 }
 
 class BudgetsCompanion extends UpdateCompanion<Budget> {
@@ -2558,6 +2607,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   final Value<int> categoryId;
   final Value<int> amount;
   final Value<String> periodMonth;
+  final Value<bool> pendingSync;
   const BudgetsCompanion({
     this.id = const Value.absent(),
     this.scope = const Value.absent(),
@@ -2565,6 +2615,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.categoryId = const Value.absent(),
     this.amount = const Value.absent(),
     this.periodMonth = const Value.absent(),
+    this.pendingSync = const Value.absent(),
   });
   BudgetsCompanion.insert({
     this.id = const Value.absent(),
@@ -2573,6 +2624,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     required int categoryId,
     required int amount,
     required String periodMonth,
+    this.pendingSync = const Value.absent(),
   }) : scope = Value(scope),
        categoryId = Value(categoryId),
        amount = Value(amount),
@@ -2584,6 +2636,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Expression<int>? categoryId,
     Expression<int>? amount,
     Expression<String>? periodMonth,
+    Expression<bool>? pendingSync,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2592,6 +2645,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       if (categoryId != null) 'category_id': categoryId,
       if (amount != null) 'amount': amount,
       if (periodMonth != null) 'period_month': periodMonth,
+      if (pendingSync != null) 'pending_sync': pendingSync,
     });
   }
 
@@ -2602,6 +2656,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Value<int>? categoryId,
     Value<int>? amount,
     Value<String>? periodMonth,
+    Value<bool>? pendingSync,
   }) {
     return BudgetsCompanion(
       id: id ?? this.id,
@@ -2610,6 +2665,7 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       categoryId: categoryId ?? this.categoryId,
       amount: amount ?? this.amount,
       periodMonth: periodMonth ?? this.periodMonth,
+      pendingSync: pendingSync ?? this.pendingSync,
     );
   }
 
@@ -2634,6 +2690,9 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     if (periodMonth.present) {
       map['period_month'] = Variable<String>(periodMonth.value);
     }
+    if (pendingSync.present) {
+      map['pending_sync'] = Variable<bool>(pendingSync.value);
+    }
     return map;
   }
 
@@ -2645,7 +2704,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
           ..write('ownerUserId: $ownerUserId, ')
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
-          ..write('periodMonth: $periodMonth')
+          ..write('periodMonth: $periodMonth, ')
+          ..write('pendingSync: $pendingSync')
           ..write(')'))
         .toString();
   }
@@ -6636,6 +6696,7 @@ typedef $$BudgetsTableCreateCompanionBuilder =
       required int categoryId,
       required int amount,
       required String periodMonth,
+      Value<bool> pendingSync,
     });
 typedef $$BudgetsTableUpdateCompanionBuilder =
     BudgetsCompanion Function({
@@ -6645,6 +6706,7 @@ typedef $$BudgetsTableUpdateCompanionBuilder =
       Value<int> categoryId,
       Value<int> amount,
       Value<String> periodMonth,
+      Value<bool> pendingSync,
     });
 
 class $$BudgetsTableFilterComposer
@@ -6683,6 +6745,11 @@ class $$BudgetsTableFilterComposer
 
   ColumnFilters<String> get periodMonth => $composableBuilder(
     column: $table.periodMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6725,6 +6792,11 @@ class $$BudgetsTableOrderingComposer
     column: $table.periodMonth,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$BudgetsTableAnnotationComposer
@@ -6757,6 +6829,11 @@ class $$BudgetsTableAnnotationComposer
 
   GeneratedColumn<String> get periodMonth => $composableBuilder(
     column: $table.periodMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
     builder: (column) => column,
   );
 }
@@ -6795,6 +6872,7 @@ class $$BudgetsTableTableManager
                 Value<int> categoryId = const Value.absent(),
                 Value<int> amount = const Value.absent(),
                 Value<String> periodMonth = const Value.absent(),
+                Value<bool> pendingSync = const Value.absent(),
               }) => BudgetsCompanion(
                 id: id,
                 scope: scope,
@@ -6802,6 +6880,7 @@ class $$BudgetsTableTableManager
                 categoryId: categoryId,
                 amount: amount,
                 periodMonth: periodMonth,
+                pendingSync: pendingSync,
               ),
           createCompanionCallback:
               ({
@@ -6811,6 +6890,7 @@ class $$BudgetsTableTableManager
                 required int categoryId,
                 required int amount,
                 required String periodMonth,
+                Value<bool> pendingSync = const Value.absent(),
               }) => BudgetsCompanion.insert(
                 id: id,
                 scope: scope,
@@ -6818,6 +6898,7 @@ class $$BudgetsTableTableManager
                 categoryId: categoryId,
                 amount: amount,
                 periodMonth: periodMonth,
+                pendingSync: pendingSync,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

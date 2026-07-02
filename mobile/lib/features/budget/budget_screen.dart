@@ -429,6 +429,7 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
       categoryId: _selectedCat!.id,
       amount: _amount,
       periodMonth: widget.monthKey,
+      pendingSync: const Value(true),
     ));
     if (mounted) {
       Navigator.of(context).pop();
