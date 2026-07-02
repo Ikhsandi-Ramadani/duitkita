@@ -274,18 +274,18 @@
                 <!-- Icon -->
                 <div class="flex flex-col gap-1.5">
                     <label class="text-sm font-medium text-slate-700">Icon <span class="text-slate-400 font-normal">(opsional)</span></label>
-                    <div class="flex items-center gap-2">
-                        <InputText
-                            v-model="form.icon"
-                            class="flex-1"
-                            placeholder="Emoji atau nama icon, mis: 🍔 atau pi-tag"
-                            :invalid="!!form.errors.icon"
-                        />
-                        <div
-                            v-if="form.icon"
-                            class="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-lg shrink-0"
-                        >{{ form.icon }}</div>
-                    </div>
+                    <Select
+                        v-model="form.icon"
+                        :options="iconOptions"
+                        option-label="label"
+                        option-value="value"
+                        placeholder="Pilih icon"
+                        filter
+                        show-clear
+                        class="w-full"
+                        :invalid="!!form.errors.icon"
+                    />
+                    <small class="text-slate-400 text-xs">Harus dari daftar ini — icon di luar daftar tidak tampil benar di aplikasi mobile.</small>
                     <small v-if="form.errors.icon" class="text-red-500 text-xs">{{ form.errors.icon }}</small>
                 </div>
 
@@ -363,6 +363,53 @@ const props = defineProps({
 const typeOptions = [
     { label: 'Pemasukan', value: 'income' },
     { label: 'Pengeluaran', value: 'expense' },
+]
+
+// ─── Icon options ─────────────────────────────────────────────────────────────
+// Must match mobile/lib/ui/widgets/cat_icon.dart's iconMap keys exactly —
+// a key entered here that isn't in that map falls back to a generic dot
+// icon everywhere in the app except this admin screen.
+const iconOptions = [
+    { label: 'Makanan (utensils)', value: 'utensils' },
+    { label: 'Mobil (car)', value: 'car' },
+    { label: 'BBM (fuel)', value: 'fuel' },
+    { label: 'Tagihan (receipt)', value: 'receipt' },
+    { label: 'Sinyal/Pulsa (signal)', value: 'signal' },
+    { label: 'Tas Belanja (bag)', value: 'bag' },
+    { label: 'Kesehatan (health)', value: 'health' },
+    { label: 'Buku (book)', value: 'book' },
+    { label: 'Film (film)', value: 'film' },
+    { label: 'Orang/Arisan (users)', value: 'users' },
+    { label: 'Sedekah (handheart)', value: 'handheart' },
+    { label: 'Lainnya (dots)', value: 'dots' },
+    { label: 'Kerja (briefcase)', value: 'briefcase' },
+    { label: 'Hadiah (gift)', value: 'gift' },
+    { label: 'Proteksi (shield)', value: 'shield' },
+    { label: 'Target (flag)', value: 'flag' },
+    { label: 'HP (smartphone)', value: 'smartphone' },
+    { label: 'Bank (account_balance)', value: 'account_balance' },
+    { label: 'Pembayaran (payments)', value: 'payments' },
+    { label: 'Dompet (account_balance_wallet)', value: 'account_balance_wallet' },
+    { label: 'Keranjang (shopping_cart)', value: 'shopping_cart' },
+    { label: 'Restoran (restaurant)', value: 'restaurant' },
+    { label: 'Transport (directions_car)', value: 'directions_car' },
+    { label: 'Rumah Sakit (local_hospital)', value: 'local_hospital' },
+    { label: 'Sekolah (school)', value: 'school' },
+    { label: 'Rumah (home)', value: 'home' },
+    { label: 'Liburan (flight)', value: 'flight' },
+    { label: 'Hiburan/Game (sports_esports)', value: 'sports_esports' },
+    { label: 'Pakaian (checkroom)', value: 'checkroom' },
+    { label: 'Listrik (bolt)', value: 'bolt' },
+    { label: 'Tabungan (savings)', value: 'savings' },
+    { label: 'Kerja (work)', value: 'work' },
+    { label: 'Hadiah Kado (card_giftcard)', value: 'card_giftcard' },
+    { label: 'Olahraga (fitness_center)', value: 'fitness_center' },
+    { label: 'Hewan (pets)', value: 'pets' },
+    { label: 'Uang (attach_money)', value: 'attach_money' },
+    { label: 'Bisnis (business_center)', value: 'business_center' },
+    { label: 'Kopi (coffee)', value: 'coffee' },
+    { label: 'Ponsel (phone_android)', value: 'phone_android' },
+    { label: 'Perbaikan (build)', value: 'build' },
 ]
 
 // ─── Filters ──────────────────────────────────────────────────────────────────

@@ -2,6 +2,20 @@ import 'package:intl/intl.dart';
 
 // Call initializeDateFormatting('id_ID') before using date helpers.
 
+// Base URL for the API — strips the /api suffix for building storage/asset
+// URLs (receipts, avatars) that live at the domain root, not under /api.
+const _kApiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8000/api',
+);
+
+/// e.g. 'http://localhost:8000/api' -> 'http://localhost:8000'
+String apiStorageBaseUrl() {
+  final base = _kApiBaseUrl;
+  if (base.endsWith('/api')) return base.substring(0, base.length - 4);
+  return base;
+}
+
 final _rpFmt = NumberFormat('#,##0', 'id_ID');
 final _dayFmt = DateFormat('EEEE, d MMM yyyy', 'id_ID');
 final _relDayFmt = DateFormat('EEEE, d MMM', 'id_ID');

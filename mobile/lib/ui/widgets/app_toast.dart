@@ -82,7 +82,7 @@ class _ToastWidgetState extends State<_ToastWidget>
     final bg = widget.success ? colors.income : colors.expense;
 
     return Positioned(
-      bottom: 92, // above bottom nav ~76 + margin
+      top: MediaQuery.paddingOf(context).top + 12, // below status bar
       left: 24,
       right: 24,
       child: FadeTransition(

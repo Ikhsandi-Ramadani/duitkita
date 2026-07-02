@@ -25,7 +25,14 @@ class UpdateService {
   Future<UpdateInfo?> checkUpdate() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(info.buildNumber) ?? 1;
+      final rawBuild = int.tryParse(info.buildNumber) ?? 1;
+      // `flutter build apk --split-per-abi` offsets versionCode per ABI
+      // (armeabi-v7a=1000+N, arm64-v8a=2000+N, x86=3000+N, x86_64=4000+N) so
+      // Play-style multi-APK installs stay ordered. Strip that offset so the
+      // update check compares the actual release build number, not the
+      // ABI-mangled one — otherwise arm64 installs (2000+N) would need N to
+      // be entered as e.g. 2004 in the admin panel instead of just 4.
+      final currentBuild = rawBuild >= 1000 ? rawBuild % 1000 : rawBuild;
 
       final res = await _dio.get('/version');
       final data = res.data as Map<String, dynamic>;

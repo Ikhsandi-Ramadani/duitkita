@@ -99,7 +99,7 @@ class SyncService {
           'note': d.note,
           'wallet_id': d.walletId,
         });
-        final serverId = (result['data'] as Map<String, dynamic>?)?['id'] as int?;
+        final serverId = result['id'] as int?;
         if (serverId != null) {
           await debtRepo.replaceWithServerId(d.id, serverId);
         }
@@ -125,7 +125,7 @@ class SyncService {
           'auto_create': r.autoCreate,
           'note': r.note,
         });
-        final serverId = (result['data'] as Map<String, dynamic>?)?['id'] as int?;
+        final serverId = result['id'] as int?;
         if (serverId != null) {
           await recurringRepo.replaceWithServerId(r.id, serverId);
         }
@@ -199,6 +199,8 @@ class SyncService {
                   email: Value((m['email'] as String?) ?? ''),
                   role: Value((m['role'] as String?) ?? 'member'),
                   avatarHue: Value((m['avatar_hue'] as int?) ?? 162),
+                  phone: Value(m['phone'] as String?),
+                  avatarPath: Value(m['avatar_path'] as String?),
                 ))
             .toList());
       } catch (e) {

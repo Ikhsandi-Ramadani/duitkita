@@ -274,4 +274,18 @@ class ApiClient {
     );
     return res.data['receipt_url'] as String;
   }
+
+  /// Uploads [imageFile] as the current user's profile photo.
+  /// Returns the domain-relative path, e.g. `/storage/avatars/abc.jpg`.
+  Future<String> uploadAvatar(File imageFile) async {
+    final formData = FormData.fromMap({
+      'avatar': await MultipartFile.fromFile(
+        imageFile.path,
+        filename: basename(imageFile.path),
+        contentType: DioMediaType('image', 'jpeg'),
+      ),
+    });
+    final res = await _dio.post('/me/avatar', data: formData);
+    return res.data['avatar_path'] as String;
+  }
 }

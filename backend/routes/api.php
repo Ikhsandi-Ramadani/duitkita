@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
     Route::put('me', [AuthController::class, 'updateMe']);
+    Route::post('me/avatar', [AuthController::class, 'uploadAvatar']);
     Route::put('me/pin', [AuthController::class, 'updatePin']);
     Route::post('me/pin/verify', [AuthController::class, 'verifyPin']);
 

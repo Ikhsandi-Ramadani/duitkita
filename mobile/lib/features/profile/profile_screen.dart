@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +14,7 @@ import '../../core/providers/theme_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/utils/format.dart';
 import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
 import '../../features/home/providers/home_providers.dart';
@@ -18,6 +22,11 @@ import '../../ui/widgets/app_sheet.dart';
 import '../../ui/widgets/app_toast.dart';
 import '../../ui/widgets/entrance_animation.dart';
 import '../../ui/widgets/member_avatar.dart';
+
+String? _avatarUrl(String? avatarPath) {
+  if (avatarPath == null) return null;
+  return '${apiStorageBaseUrl()}$avatarPath';
+}
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -264,6 +273,7 @@ class _ProfileCard extends ConsumerWidget {
             hue: member.avatarHue,
             initial: member.name.isNotEmpty ? member.name[0] : '?',
             size: 60,
+            photoUrl: _avatarUrl(member.avatarPath),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -400,6 +410,7 @@ class _FamilyCard extends StatelessWidget {
                         initial:
                             m.name.isNotEmpty ? m.name[0] : '?',
                         size: 34,
+                        photoUrl: _avatarUrl(m.avatarPath),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -739,6 +750,7 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                               initial:
                                   m.name.isNotEmpty ? m.name[0] : '?',
                               size: 38,
+                              photoUrl: _avatarUrl(m.avatarPath),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -1057,17 +1069,54 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   late final TextEditingController _confirmCtrl;
   late double _selectedHue;
   bool _saving = false;
+  bool _uploadingPhoto = false;
   String? _errorMsg;
+  late String? _avatarPath = widget.member.avatarPath;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.member.name);
-    _phoneCtrl = TextEditingController();
+    _phoneCtrl = TextEditingController(text: widget.member.phone ?? '');
     _emailCtrl = TextEditingController(text: widget.member.email);
     _passwordCtrl = TextEditingController();
     _confirmCtrl = TextEditingController();
     _selectedHue = widget.member.avatarHue.toDouble();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    if (!mounted) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final path =
+          await ref.read(apiClientProvider).uploadAvatar(File(picked.path));
+      await ref.read(memberRepoProvider).upsert(
+            MembersCompanion(
+              id: Value(widget.member.id),
+              avatarPath: Value(path),
+            ),
+          );
+      if (mounted) {
+        setState(() {
+          _avatarPath = path;
+          _uploadingPhoto = false;
+        });
+        AppToast.show(context, 'Foto profil diperbarui');
+      }
+    } catch (e) {
+      if (kDebugMode) print('[EditProfile] avatar upload error: $e');
+      if (mounted) {
+        setState(() => _uploadingPhoto = false);
+        AppToast.show(context, 'Gagal mengunggah foto', success: false);
+      }
+    }
   }
 
   @override
@@ -1118,6 +1167,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               email: Value(_emailCtrl.text.trim()),
               role: Value(widget.member.role),
               avatarHue: Value(_selectedHue.round()),
+              phone: Value(phone.isNotEmpty ? phone : widget.member.phone),
             ),
           );
 
@@ -1177,6 +1227,51 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         children: [
           Text('Edit Profil',
               style: AppText.screenTitle(color: colors.text)),
+          const SizedBox(height: 16),
+
+          // ── Foto Profil ─────────────────────────────────────────────────
+          Center(
+            child: GestureDetector(
+              onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Opacity(
+                    opacity: _uploadingPhoto ? 0.5 : 1,
+                    child: MemberAvatar(
+                      hue: _selectedHue.round(),
+                      initial: widget.member.name.isNotEmpty
+                          ? widget.member.name[0]
+                          : '?',
+                      size: 72,
+                      photoUrl: _avatarUrl(_avatarPath),
+                    ),
+                  ),
+                  if (_uploadingPhoto)
+                    const Positioned.fill(
+                      child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  else
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: colors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: colors.surface, width: 2),
+                        ),
+                        child: Icon(Icons.camera_alt_rounded,
+                            color: colors.onPrimary, size: 13),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
 
           // ── Nama Lengkap ────────────────────────────────────────────────

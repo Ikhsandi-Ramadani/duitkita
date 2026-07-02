@@ -70,7 +70,7 @@ class SyncController extends Controller
             ->get();
 
         $members = User::where('household_id', $householdId)
-            ->get(['id', 'name', 'email', 'role', 'avatar_hue']);
+            ->get(['id', 'name', 'email', 'phone', 'role', 'avatar_hue', 'avatar_path']);
 
         $notifications = Notification::where('household_id', $householdId)
             ->where('created_at', '>', $sinceDate)

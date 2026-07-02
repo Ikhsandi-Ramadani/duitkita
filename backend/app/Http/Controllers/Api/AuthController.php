@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -200,6 +201,28 @@ class AuthController extends Controller
         $user->update($data);
 
         return response()->json(new UserResource($user->fresh()));
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|image|max:5120', // 5 MB
+        ]);
+
+        $user = $request->user();
+
+        // Delete old avatar if one is already stored
+        if ($user->avatar_path) {
+            $oldRelative = ltrim(str_replace('/storage/', '', $user->avatar_path), '/');
+            Storage::disk('public')->delete($oldRelative);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->update(['avatar_path' => '/storage/' . $path]);
+
+        return response()->json([
+            'avatar_path' => $user->avatar_path,
+        ]);
     }
 
     public function updatePin(UpdatePinRequest $request): JsonResponse

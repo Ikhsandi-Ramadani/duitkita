@@ -13,11 +13,16 @@ class MemberAvatar extends StatelessWidget {
     this.ring = false,
     this.ringColor,
     this.ringWidth = 2.5,
+    this.photoUrl,
   });
 
   final int hue;
   final String initial;
   final double size;
+
+  /// Full URL to a real profile photo. When set, shown instead of the
+  /// hue-colored initial circle.
+  final String? photoUrl;
 
   /// When true uses the light tint bg (hue 42% 90%) with colored text.
   final bool tint;
@@ -38,17 +43,25 @@ class MemberAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         shape: BoxShape.circle,
+        image: photoUrl != null
+            ? DecorationImage(
+                image: NetworkImage(photoUrl!),
+                fit: BoxFit.cover,
+              )
+            : null,
       ),
       alignment: Alignment.center,
-      child: Text(
-        initial.isNotEmpty ? initial[0].toUpperCase() : '?',
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: size * 0.42,
-          fontWeight: FontWeight.w700,
-          color: textColor,
-          height: 1,
-        ),
-      ),
+      child: photoUrl != null
+          ? null
+          : Text(
+              initial.isNotEmpty ? initial[0].toUpperCase() : '?',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: size * 0.42,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                height: 1,
+              ),
+            ),
     );
 
     if (ring) {

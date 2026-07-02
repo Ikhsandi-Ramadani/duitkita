@@ -55,8 +55,36 @@ class $MembersTable extends Members with TableInfo<$MembersTable, Member> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
   @override
-  List<GeneratedColumn> get $columns => [id, name, email, role, avatarHue];
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _avatarPathMeta = const VerificationMeta(
+    'avatarPath',
+  );
+  @override
+  late final GeneratedColumn<String> avatarPath = GeneratedColumn<String>(
+    'avatar_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    email,
+    role,
+    avatarHue,
+    phone,
+    avatarPath,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -104,6 +132,18 @@ class $MembersTable extends Members with TableInfo<$MembersTable, Member> {
     } else if (isInserting) {
       context.missing(_avatarHueMeta);
     }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('avatar_path')) {
+      context.handle(
+        _avatarPathMeta,
+        avatarPath.isAcceptableOrUnknown(data['avatar_path']!, _avatarPathMeta),
+      );
+    }
     return context;
   }
 
@@ -133,6 +173,14 @@ class $MembersTable extends Members with TableInfo<$MembersTable, Member> {
         DriftSqlType.int,
         data['${effectivePrefix}avatar_hue'],
       )!,
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      avatarPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_path'],
+      ),
     );
   }
 
@@ -148,12 +196,16 @@ class Member extends DataClass implements Insertable<Member> {
   final String email;
   final String role;
   final int avatarHue;
+  final String? phone;
+  final String? avatarPath;
   const Member({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
     required this.avatarHue,
+    this.phone,
+    this.avatarPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -163,6 +215,12 @@ class Member extends DataClass implements Insertable<Member> {
     map['email'] = Variable<String>(email);
     map['role'] = Variable<String>(role);
     map['avatar_hue'] = Variable<int>(avatarHue);
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    if (!nullToAbsent || avatarPath != null) {
+      map['avatar_path'] = Variable<String>(avatarPath);
+    }
     return map;
   }
 
@@ -173,6 +231,12 @@ class Member extends DataClass implements Insertable<Member> {
       email: Value(email),
       role: Value(role),
       avatarHue: Value(avatarHue),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      avatarPath: avatarPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avatarPath),
     );
   }
 
@@ -187,6 +251,8 @@ class Member extends DataClass implements Insertable<Member> {
       email: serializer.fromJson<String>(json['email']),
       role: serializer.fromJson<String>(json['role']),
       avatarHue: serializer.fromJson<int>(json['avatarHue']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      avatarPath: serializer.fromJson<String?>(json['avatarPath']),
     );
   }
   @override
@@ -198,6 +264,8 @@ class Member extends DataClass implements Insertable<Member> {
       'email': serializer.toJson<String>(email),
       'role': serializer.toJson<String>(role),
       'avatarHue': serializer.toJson<int>(avatarHue),
+      'phone': serializer.toJson<String?>(phone),
+      'avatarPath': serializer.toJson<String?>(avatarPath),
     };
   }
 
@@ -207,12 +275,16 @@ class Member extends DataClass implements Insertable<Member> {
     String? email,
     String? role,
     int? avatarHue,
+    Value<String?> phone = const Value.absent(),
+    Value<String?> avatarPath = const Value.absent(),
   }) => Member(
     id: id ?? this.id,
     name: name ?? this.name,
     email: email ?? this.email,
     role: role ?? this.role,
     avatarHue: avatarHue ?? this.avatarHue,
+    phone: phone.present ? phone.value : this.phone,
+    avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
   );
   Member copyWithCompanion(MembersCompanion data) {
     return Member(
@@ -221,6 +293,10 @@ class Member extends DataClass implements Insertable<Member> {
       email: data.email.present ? data.email.value : this.email,
       role: data.role.present ? data.role.value : this.role,
       avatarHue: data.avatarHue.present ? data.avatarHue.value : this.avatarHue,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      avatarPath: data.avatarPath.present
+          ? data.avatarPath.value
+          : this.avatarPath,
     );
   }
 
@@ -231,13 +307,16 @@ class Member extends DataClass implements Insertable<Member> {
           ..write('name: $name, ')
           ..write('email: $email, ')
           ..write('role: $role, ')
-          ..write('avatarHue: $avatarHue')
+          ..write('avatarHue: $avatarHue, ')
+          ..write('phone: $phone, ')
+          ..write('avatarPath: $avatarPath')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, email, role, avatarHue);
+  int get hashCode =>
+      Object.hash(id, name, email, role, avatarHue, phone, avatarPath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -246,7 +325,9 @@ class Member extends DataClass implements Insertable<Member> {
           other.name == this.name &&
           other.email == this.email &&
           other.role == this.role &&
-          other.avatarHue == this.avatarHue);
+          other.avatarHue == this.avatarHue &&
+          other.phone == this.phone &&
+          other.avatarPath == this.avatarPath);
 }
 
 class MembersCompanion extends UpdateCompanion<Member> {
@@ -255,12 +336,16 @@ class MembersCompanion extends UpdateCompanion<Member> {
   final Value<String> email;
   final Value<String> role;
   final Value<int> avatarHue;
+  final Value<String?> phone;
+  final Value<String?> avatarPath;
   const MembersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.email = const Value.absent(),
     this.role = const Value.absent(),
     this.avatarHue = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.avatarPath = const Value.absent(),
   });
   MembersCompanion.insert({
     this.id = const Value.absent(),
@@ -268,6 +353,8 @@ class MembersCompanion extends UpdateCompanion<Member> {
     required String email,
     required String role,
     required int avatarHue,
+    this.phone = const Value.absent(),
+    this.avatarPath = const Value.absent(),
   }) : name = Value(name),
        email = Value(email),
        role = Value(role),
@@ -278,6 +365,8 @@ class MembersCompanion extends UpdateCompanion<Member> {
     Expression<String>? email,
     Expression<String>? role,
     Expression<int>? avatarHue,
+    Expression<String>? phone,
+    Expression<String>? avatarPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -285,6 +374,8 @@ class MembersCompanion extends UpdateCompanion<Member> {
       if (email != null) 'email': email,
       if (role != null) 'role': role,
       if (avatarHue != null) 'avatar_hue': avatarHue,
+      if (phone != null) 'phone': phone,
+      if (avatarPath != null) 'avatar_path': avatarPath,
     });
   }
 
@@ -294,6 +385,8 @@ class MembersCompanion extends UpdateCompanion<Member> {
     Value<String>? email,
     Value<String>? role,
     Value<int>? avatarHue,
+    Value<String?>? phone,
+    Value<String?>? avatarPath,
   }) {
     return MembersCompanion(
       id: id ?? this.id,
@@ -301,6 +394,8 @@ class MembersCompanion extends UpdateCompanion<Member> {
       email: email ?? this.email,
       role: role ?? this.role,
       avatarHue: avatarHue ?? this.avatarHue,
+      phone: phone ?? this.phone,
+      avatarPath: avatarPath ?? this.avatarPath,
     );
   }
 
@@ -322,6 +417,12 @@ class MembersCompanion extends UpdateCompanion<Member> {
     if (avatarHue.present) {
       map['avatar_hue'] = Variable<int>(avatarHue.value);
     }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (avatarPath.present) {
+      map['avatar_path'] = Variable<String>(avatarPath.value);
+    }
     return map;
   }
 
@@ -332,7 +433,9 @@ class MembersCompanion extends UpdateCompanion<Member> {
           ..write('name: $name, ')
           ..write('email: $email, ')
           ..write('role: $role, ')
-          ..write('avatarHue: $avatarHue')
+          ..write('avatarHue: $avatarHue, ')
+          ..write('phone: $phone, ')
+          ..write('avatarPath: $avatarPath')
           ..write(')'))
         .toString();
   }
@@ -5427,6 +5530,8 @@ typedef $$MembersTableCreateCompanionBuilder =
       required String email,
       required String role,
       required int avatarHue,
+      Value<String?> phone,
+      Value<String?> avatarPath,
     });
 typedef $$MembersTableUpdateCompanionBuilder =
     MembersCompanion Function({
@@ -5435,6 +5540,8 @@ typedef $$MembersTableUpdateCompanionBuilder =
       Value<String> email,
       Value<String> role,
       Value<int> avatarHue,
+      Value<String?> phone,
+      Value<String?> avatarPath,
     });
 
 class $$MembersTableFilterComposer
@@ -5468,6 +5575,16 @@ class $$MembersTableFilterComposer
 
   ColumnFilters<int> get avatarHue => $composableBuilder(
     column: $table.avatarHue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5505,6 +5622,16 @@ class $$MembersTableOrderingComposer
     column: $table.avatarHue,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MembersTableAnnotationComposer
@@ -5530,6 +5657,14 @@ class $$MembersTableAnnotationComposer
 
   GeneratedColumn<int> get avatarHue =>
       $composableBuilder(column: $table.avatarHue, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => column,
+  );
 }
 
 class $$MembersTableTableManager
@@ -5565,12 +5700,16 @@ class $$MembersTableTableManager
                 Value<String> email = const Value.absent(),
                 Value<String> role = const Value.absent(),
                 Value<int> avatarHue = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
               }) => MembersCompanion(
                 id: id,
                 name: name,
                 email: email,
                 role: role,
                 avatarHue: avatarHue,
+                phone: phone,
+                avatarPath: avatarPath,
               ),
           createCompanionCallback:
               ({
@@ -5579,12 +5718,16 @@ class $$MembersTableTableManager
                 required String email,
                 required String role,
                 required int avatarHue,
+                Value<String?> phone = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
               }) => MembersCompanion.insert(
                 id: id,
                 name: name,
                 email: email,
                 role: role,
                 avatarHue: avatarHue,
+                phone: phone,
+                avatarPath: avatarPath,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

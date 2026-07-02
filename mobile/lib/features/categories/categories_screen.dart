@@ -44,6 +44,23 @@ final _deleteCategoryProvider =
   };
 });
 
+final _updateCategoryProvider =
+    Provider<Future<void> Function(int, Map<String, dynamic>)>((ref) {
+  return (id, body) async {
+    final api = ref.read(apiClientProvider);
+    final repo = ref.read(categoryRepoProvider);
+    final data = await api.updateCategory(id, body);
+    await repo.upsert(CategoriesCompanion(
+      id: Value(id),
+      name: Value(data['name'] as String),
+      type: Value(data['type'] as String),
+      icon: Value(data['icon'] as String? ?? 'shopping_cart'),
+      hue: Value((data['hue'] as num?)?.toInt() ?? 0),
+      parentId: const Value(null),
+    ));
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
@@ -137,6 +154,13 @@ class CategoriesScreen extends ConsumerWidget {
       child: const _AddCategorySheet(),
     );
   }
+}
+
+void _showEditCategorySheet(BuildContext context, Category category) {
+  AppSheet.show(
+    context: context,
+    child: _AddCategorySheet(existing: category),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -301,52 +325,56 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
         child: Icon(Icons.delete_outline_rounded,
             color: colors.expense, size: 22),
       ),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            // Icon container with hue color
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: hueColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(11),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _showEditCategorySheet(context, cat),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              // Icon container with hue color
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: hueColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(iconData, color: hueColor, size: 20),
               ),
-              child: Icon(iconData, color: hueColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                cat.name,
-                style: AppText.body(color: colors.text)
-                    .copyWith(fontWeight: FontWeight.w600),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  cat.name,
+                  style: AppText.body(color: colors.text)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
               ),
-            ),
-            // Hue color dot
-            Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: hueColor,
-                shape: BoxShape.circle,
+              // Hue color dot
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: hueColor,
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            if (_deleting)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              GestureDetector(
-                onTap: _confirmDelete,
-                child: Icon(Icons.delete_outline_rounded,
-                    color: colors.text3, size: 18),
-              ),
-          ],
+              const SizedBox(width: 10),
+              if (_deleting)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                GestureDetector(
+                  onTap: _confirmDelete,
+                  child: Icon(Icons.delete_outline_rounded,
+                      color: colors.text3, size: 18),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -405,7 +433,8 @@ class _EmptyState extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _AddCategorySheet extends ConsumerStatefulWidget {
-  const _AddCategorySheet();
+  const _AddCategorySheet({this.existing});
+  final Category? existing;
 
   @override
   ConsumerState<_AddCategorySheet> createState() =>
@@ -413,12 +442,15 @@ class _AddCategorySheet extends ConsumerStatefulWidget {
 }
 
 class _AddCategorySheetState extends ConsumerState<_AddCategorySheet> {
-  final _nameCtrl = TextEditingController();
-  String _type = 'expense';
-  String _selectedIcon = 'shopping_cart';
-  double _selectedHue = 0;
+  late final _nameCtrl =
+      TextEditingController(text: widget.existing?.name ?? '');
+  late String _type = widget.existing?.type ?? 'expense';
+  late String _selectedIcon = widget.existing?.icon ?? 'shopping_cart';
+  late double _selectedHue = widget.existing?.hue.toDouble() ?? 0;
   bool _saving = false;
   String? _errorMsg;
+
+  bool get _isEditing => widget.existing != null;
 
   @override
   void dispose() {
@@ -436,17 +468,26 @@ class _AddCategorySheetState extends ConsumerState<_AddCategorySheet> {
     });
 
     try {
-      await ref.read(_createCategoryProvider)({
+      final body = {
         'name': _nameCtrl.text.trim(),
         'type': _type,
         'icon': _selectedIcon,
         'hue': _selectedHue.round(),
-      });
+      };
+      if (_isEditing) {
+        await ref.read(_updateCategoryProvider)(widget.existing!.id, body);
+      } else {
+        await ref.read(_createCategoryProvider)(body);
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
         AppToast.show(
-            context, 'Kategori "${_nameCtrl.text.trim()}" ditambahkan');
+          context,
+          _isEditing
+              ? 'Kategori "${_nameCtrl.text.trim()}" diperbarui'
+              : 'Kategori "${_nameCtrl.text.trim()}" ditambahkan',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -504,7 +545,7 @@ class _AddCategorySheetState extends ConsumerState<_AddCategorySheet> {
           Row(
             children: [
               Expanded(
-                child: Text('Tambah Kategori',
+                child: Text(_isEditing ? 'Edit Kategori' : 'Tambah Kategori',
                     style: AppText.screenTitle(color: colors.text)),
               ),
               Container(

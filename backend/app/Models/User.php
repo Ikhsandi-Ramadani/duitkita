@@ -22,6 +22,7 @@ class User extends Authenticatable
         'role',
         'is_super_admin',
         'avatar_hue',
+        'avatar_path',
         'pin',
     ];
 

@@ -9,6 +9,8 @@ class Members extends Table {
   TextColumn get email => text()();
   TextColumn get role => text()();
   IntColumn get avatarHue => integer()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get avatarPath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
