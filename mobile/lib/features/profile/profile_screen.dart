@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -196,7 +197,9 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  Future<void> _showAboutDialog(BuildContext context) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
     final colors = context.appColors;
     showDialog(
       context: context,
@@ -212,7 +215,8 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             Text('DuitKita', style: AppText.body(color: colors.text).copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text('Versi 1.4', style: AppText.label(color: colors.text2)),
+            Text('Versi ${packageInfo.version} (${packageInfo.buildNumber})',
+                style: AppText.label(color: colors.text2)),
             const SizedBox(height: 8),
             Text(
               'Aplikasi keuangan keluarga untuk mencatat dan mengelola pengeluaran bersama.',
