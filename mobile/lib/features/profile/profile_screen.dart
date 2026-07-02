@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -665,6 +666,49 @@ class _DarkModeToggle extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _BiometricToggle extends ConsumerWidget {
+  static final _localAuth = LocalAuthentication();
+
+  Future<void> _onChanged(BuildContext context, WidgetRef ref, bool v) async {
+    if (!v) {
+      await ref.read(sessionRepoProvider).set('biometricEnabled', 'false');
+      return;
+    }
+
+    try {
+      final isSupported = await _localAuth.isDeviceSupported();
+      if (!isSupported) {
+        if (context.mounted) {
+          AppToast.show(context, 'HP ini tidak mendukung biometrik',
+              success: false);
+        }
+        return;
+      }
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final available = await _localAuth.getAvailableBiometrics();
+      if (!canCheck || available.isEmpty) {
+        if (context.mounted) {
+          AppToast.show(
+              context, 'Belum ada sidik jari/wajah terdaftar di HP',
+              success: false);
+        }
+        return;
+      }
+
+      final confirmed = await _localAuth.authenticate(
+        localizedReason: 'Verifikasi biometrik untuk mengaktifkan fitur ini',
+      );
+      if (confirmed) {
+        await ref.read(sessionRepoProvider).set('biometricEnabled', 'true');
+      }
+    } catch (e) {
+      if (kDebugMode) print('[BiometricToggle] error: $e');
+      if (context.mounted) {
+        AppToast.show(context, 'Gagal memverifikasi biometrik',
+            success: false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
@@ -673,11 +717,7 @@ class _BiometricToggle extends ConsumerWidget {
 
     return Switch(
       value: enabled,
-      onChanged: (v) async {
-        await ref
-            .read(sessionRepoProvider)
-            .set('biometricEnabled', v.toString());
-      },
+      onChanged: (v) => _onChanged(context, ref, v),
       activeThumbColor: colors.primary,
     );
   }

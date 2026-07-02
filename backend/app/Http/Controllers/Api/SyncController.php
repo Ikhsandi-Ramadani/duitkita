@@ -36,34 +36,43 @@ class SyncController extends Controller
             ? \Illuminate\Support\Carbon::createFromTimestampMs((int) $since)
             : \Illuminate\Support\Carbon::parse($since);
 
-        $wallets = Wallet::withTrashed()
+        // withTrashed() queries below rely on Eloquent's deleted_at timestamp,
+        // but the raw model JSON has no `deleted` boolean — the mobile app's
+        // sync consumer reads a `deleted` key specifically, so without this it
+        // always defaults to false and resurrects anything deleted on the
+        // very next pull. Append the computed flag before serializing.
+        $withDeletedFlag = fn ($collection) => $collection->map(
+            fn ($m) => [...$m->toArray(), 'deleted' => $m->deleted_at !== null]
+        );
+
+        $wallets = $withDeletedFlag(Wallet::withTrashed()
             ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
-            ->get();
+            ->get());
 
         $categories = Category::where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
             ->get();
 
-        $transactions = Transaction::withTrashed()
+        $transactions = $withDeletedFlag(Transaction::withTrashed()
             ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
             ->with('splits.user:id,name,avatar_hue')
-            ->get();
+            ->get());
 
         $budgets = Budget::where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
             ->get();
 
-        $savingsGoals = SavingsGoal::withTrashed()
+        $savingsGoals = $withDeletedFlag(SavingsGoal::withTrashed()
             ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
-            ->get();
+            ->get());
 
-        $debts = Debt::withTrashed()
+        $debts = $withDeletedFlag(Debt::withTrashed()
             ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
-            ->get();
+            ->get());
 
         $recurrings = Recurring::where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
@@ -112,7 +121,18 @@ class SyncController extends Controller
                 continue;
             }
 
-            $transaction = DB::transaction(function () use ($item, $clientId, $householdId, $request) {
+            // Mobile pre-signs amount (negative for expense/transfer) before
+            // pushing, but BalanceService::apply() applies its own sign via
+            // increment()/decrement() based on type for these three types —
+            // storing the pre-signed value made decrement() subtract a
+            // negative number, i.e. add instead of subtract. Adjustment is
+            // the exception: its amount is a genuine signed delta consumed
+            // via increment(), so it must stay untouched.
+            $amount = in_array($item['type'], ['income', 'expense', 'transfer'], true)
+                ? abs($item['amount'])
+                : $item['amount'];
+
+            $transaction = DB::transaction(function () use ($item, $amount, $clientId, $householdId, $request) {
                 $transaction = Transaction::create([
                     'client_id'        => $clientId,
                     'household_id'     => $householdId,
@@ -120,7 +140,7 @@ class SyncController extends Controller
                     'wallet_id'        => $item['wallet_id'],
                     'target_wallet_id' => $item['target_wallet_id'] ?? null,
                     'category_id'      => $item['category_id'] ?? null,
-                    'amount'           => $item['amount'],
+                    'amount'           => $amount,
                     'date'             => $item['date'],
                     'note'             => $item['note'] ?? null,
                     'recorded_by'      => $request->user()->id,
