@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
@@ -1089,6 +1090,8 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
     );
     if (picked == null) return;
     if (!mounted) return;
@@ -1112,9 +1115,22 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       }
     } catch (e) {
       if (kDebugMode) print('[EditProfile] avatar upload error: $e');
+      var message = 'Gagal mengunggah foto';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['message'] is String) {
+          message = data['message'] as String;
+        } else if (e.response?.statusCode == 422) {
+          message = 'Foto tidak valid atau terlalu besar';
+        } else if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout) {
+          message = 'Koneksi lambat, coba lagi';
+        }
+      }
       if (mounted) {
         setState(() => _uploadingPhoto = false);
-        AppToast.show(context, 'Gagal mengunggah foto', success: false);
+        AppToast.show(context, message, success: false);
       }
     }
   }
