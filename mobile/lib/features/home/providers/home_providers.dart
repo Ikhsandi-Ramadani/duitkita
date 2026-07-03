@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/providers.dart';
+import '../../../data/repositories/transaction_repository.dart' show MonthlyTotal;
 
 // ---------------------------------------------------------------------------
 // Session helpers
@@ -50,6 +51,14 @@ class BudgetSummary {
 final currentMonthProvider = Provider<String>((ref) {
   final now = DateTime.now();
   return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+});
+
+/// Total income vs expense for the current month, for the homepage
+/// income/expense row.
+final monthlyIncomeExpenseProvider = FutureProvider<MonthlyTotal>((ref) async {
+  final month = ref.watch(currentMonthProvider);
+  final txRepo = ref.watch(transactionRepoProvider);
+  return txRepo.monthlyTotals(month);
 });
 
 final budgetSummaryProvider = FutureProvider<BudgetSummary>((ref) async {

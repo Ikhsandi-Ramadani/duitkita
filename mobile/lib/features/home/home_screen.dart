@@ -294,6 +294,37 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  // Income/expense this month
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final monthlyAsync =
+                          ref.watch(monthlyIncomeExpenseProvider);
+                      final income = monthlyAsync.value?.income ?? 0;
+                      final expense = monthlyAsync.value?.expense ?? 0;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _GlassCard(
+                              label: 'Pemasukan Bulan Ini',
+                              icon: Icons.arrow_downward_rounded,
+                              amount: income,
+                              hidden: hidden,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _GlassCard(
+                              label: 'Pengeluaran Bulan Ini',
+                              icon: Icons.arrow_upward_rounded,
+                              amount: expense,
+                              hidden: hidden,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
