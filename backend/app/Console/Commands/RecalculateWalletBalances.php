@@ -25,29 +25,27 @@ class RecalculateWalletBalances extends Command
         foreach ($wallets as $wallet) {
             $balance = $wallet->initial_balance;
 
-            $balance += Transaction::withTrashed()
-                ->where('wallet_id', $wallet->id)
+            // Deliberately NOT withTrashed() here — soft-deleted transactions
+            // must not count toward the balance. (withTrashed() is only used
+            // above for the wallet itself, to also repair deleted wallets.)
+            $balance += Transaction::where('wallet_id', $wallet->id)
                 ->where('type', 'income')
                 ->sum(DB::raw('ABS(amount)'));
 
-            $balance -= Transaction::withTrashed()
-                ->where('wallet_id', $wallet->id)
+            $balance -= Transaction::where('wallet_id', $wallet->id)
                 ->where('type', 'expense')
                 ->sum(DB::raw('ABS(amount)'));
 
-            $balance -= Transaction::withTrashed()
-                ->where('wallet_id', $wallet->id)
+            $balance -= Transaction::where('wallet_id', $wallet->id)
                 ->where('type', 'transfer')
                 ->sum(DB::raw('ABS(amount)'));
 
-            $balance += Transaction::withTrashed()
-                ->where('target_wallet_id', $wallet->id)
+            $balance += Transaction::where('target_wallet_id', $wallet->id)
                 ->where('type', 'transfer')
                 ->sum(DB::raw('ABS(amount)'));
 
             // Adjustment amount is a genuine signed delta — sum as-is.
-            $balance += (int) Transaction::withTrashed()
-                ->where('wallet_id', $wallet->id)
+            $balance += (int) Transaction::where('wallet_id', $wallet->id)
                 ->where('type', 'adjustment')
                 ->sum('amount');
 

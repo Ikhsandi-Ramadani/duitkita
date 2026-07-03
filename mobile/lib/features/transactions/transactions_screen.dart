@@ -11,15 +11,21 @@ import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../features/home/providers/home_providers.dart';
-import '../../ui/widgets/app_sheet.dart';
 import '../../ui/widgets/empty_state.dart';
-import '../../ui/widgets/member_avatar.dart';
 import '../../ui/widgets/tx_row.dart';
 import '../../ui/widgets/tx_type_meta.dart';
 
 // ---------------------------------------------------------------------------
 // Transactions Screen
 // ---------------------------------------------------------------------------
+
+/// Period filter options: 'semua' | 'hari-ini' | '7hari' | 'bulan'.
+const _periodOptions = [
+  ('semua', 'Semua tanggal'),
+  ('hari-ini', 'Hari ini'),
+  ('7hari', '7 hari terakhir'),
+  ('bulan', 'Bulan ini'),
+];
 
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
@@ -31,8 +37,8 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   String _search = '';
   String? _typeFilter; // null = Semua
-  int? _memberFilter; // null = Semua
-  String? _monthFilter; // null = all time, 'YYYY-MM' = specific month
+  String _period = 'semua';
+  bool _periodOpen = false;
   final _searchCtrl = TextEditingController();
 
   @override
@@ -42,53 +48,39 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   // -------------------------------------------------------------------------
-  // Month helpers
+  // Period helpers
   // -------------------------------------------------------------------------
 
-  String _formatMonth(String ym) {
-    final parts = ym.split('-');
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${months[int.parse(parts[1]) - 1]} ${parts[0]}';
+  String _periodLabel(String period) {
+    return _periodOptions.firstWhere((o) => o.$1 == period).$2;
   }
 
-  Future<void> _pickMonth() async {
+  ({DateTime? from, DateTime? to}) _periodRange(String period) {
     final now = DateTime.now();
-    final months = List.generate(12, (i) {
-      final d = DateTime(now.year, now.month - i);
-      return '${d.year}-${d.month.toString().padLeft(2, '0')}';
-    });
-
-    final picked = await AppSheet.show<String?>(
-      context: context,
-      child: _MonthPickerSheet(months: months, selected: _monthFilter),
-    );
-    if (mounted) {
-      setState(() => _monthFilter = (picked == null || picked == '') ? null : picked);
+    final today = DateTime(now.year, now.month, now.day);
+    switch (period) {
+      case 'hari-ini':
+        return (from: today, to: today.add(const Duration(days: 1)));
+      case '7hari':
+        return (
+          from: today.subtract(const Duration(days: 6)),
+          to: today.add(const Duration(days: 1)),
+        );
+      case 'bulan':
+        return (
+          from: DateTime(now.year, now.month, 1),
+          to: DateTime(now.year, now.month + 1, 1),
+        );
+      default:
+        return (from: null, to: null);
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Member picker sheet
-  // -------------------------------------------------------------------------
-
-  Future<void> _pickMember() async {
-    final members = ref.read(membersProvider).value ?? [];
-
-    final picked = await AppSheet.show<int?>(
-      context: context,
-      child: _MemberFilterSheet(
-        members: members,
-        selected: _memberFilter,
-      ),
-    );
-
-    if (mounted && picked != null) {
-      // -1 = Semua anggota
-      setState(() => _memberFilter = picked == -1 ? null : picked);
-    }
+  void _selectPeriod(String period) {
+    setState(() {
+      _period = period;
+      _periodOpen = false;
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -98,15 +90,18 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final range = _periodRange(_period);
     final filters = TransactionFilters(
       type: _typeFilter,
-      memberId: _memberFilter,
       search: _search.isEmpty ? null : _search,
-      month: _monthFilter,
+      dateFrom: range.from,
+      dateTo: range.to,
     );
 
     final grouped = ref.watch(txGroupedProvider(filters));
     final hidden = ref.watch(balanceHiddenProvider).value ?? false;
+    final hasActiveFilter =
+        _typeFilter != null || _period != 'semua' || _search.isNotEmpty;
 
     return Scaffold(
       backgroundColor: colors.appBg,
@@ -114,12 +109,24 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
+            // Header: title + month eyebrow
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Text(
-                'Transaksi',
-                style: AppText.screenTitle(color: colors.text),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Transaksi',
+                    style: AppText.screenTitle(color: colors.text),
+                  ),
+                  Text(
+                    monthLabel(DateTime.now()).toUpperCase(),
+                    style: AppText.micro(color: colors.text3)
+                        .copyWith(letterSpacing: 0.8),
+                  ),
+                ],
               ),
             ),
             // Search bar
@@ -132,132 +139,150 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // Filter chips
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _FilterChip(
-                    label: 'Semua',
-                    active: _typeFilter == null,
-                    activeColor: colors.primary,
-                    colors: colors,
-                    onTap: () => setState(() => _typeFilter = null),
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: 'Keluar',
-                    active: _typeFilter == 'expense',
-                    activeColor: colors.expense,
-                    colors: colors,
-                    onTap: () => setState(() =>
-                        _typeFilter = _typeFilter == 'expense' ? null : 'expense'),
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: 'Masuk',
-                    active: _typeFilter == 'income',
-                    activeColor: colors.income,
-                    colors: colors,
-                    onTap: () => setState(() =>
-                        _typeFilter = _typeFilter == 'income' ? null : 'income'),
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: 'Transfer',
-                    active: _typeFilter == 'transfer',
-                    activeColor: colors.transfer,
-                    colors: colors,
-                    onTap: () => setState(() =>
-                        _typeFilter =
-                            _typeFilter == 'transfer' ? null : 'transfer'),
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: 'Penyesuaian',
-                    active: _typeFilter == 'adjustment',
-                    activeColor: colors.adjust,
-                    colors: colors,
-                    onTap: () => setState(() =>
-                        _typeFilter =
-                            _typeFilter == 'adjustment' ? null : 'adjustment'),
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: _memberFilter == null ? 'Anggota' : _memberName(),
-                    active: _memberFilter != null,
-                    activeColor: colors.primary,
-                    colors: colors,
-                    onTap: _pickMember,
-                  ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: _monthFilter == null
-                        ? 'Semua Bulan'
-                        : _formatMonth(_monthFilter!),
-                    active: _monthFilter != null,
-                    activeColor: colors.primary,
-                    colors: colors,
-                    onTap: _pickMonth,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            // List
+            // Period pill + dropdown, type chips, list
             Expanded(
-              child: grouped.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (data) {
-                  if (data.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'Belum ada transaksi',
-                      sub: 'Tambah transaksi pertamamu',
-                    );
-                  }
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Period pill
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _PeriodPill(
+                          label: _periodLabel(_period),
+                          active: _period != 'semua',
+                          colors: colors,
+                          onTap: () =>
+                              setState(() => _periodOpen = !_periodOpen),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Type filter chips
+                      SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          children: [
+                            _FilterChip(
+                              label: 'Semua',
+                              active: _typeFilter == null,
+                              activeColor: colors.primary,
+                              colors: colors,
+                              onTap: () => setState(() => _typeFilter = null),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Keluar',
+                              active: _typeFilter == 'expense',
+                              activeColor: colors.expense,
+                              colors: colors,
+                              onTap: () => setState(() => _typeFilter =
+                                  _typeFilter == 'expense' ? null : 'expense'),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Masuk',
+                              active: _typeFilter == 'income',
+                              activeColor: colors.income,
+                              colors: colors,
+                              onTap: () => setState(() => _typeFilter =
+                                  _typeFilter == 'income' ? null : 'income'),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Transfer',
+                              active: _typeFilter == 'transfer',
+                              activeColor: colors.transfer,
+                              colors: colors,
+                              onTap: () => setState(() => _typeFilter =
+                                  _typeFilter == 'transfer'
+                                      ? null
+                                      : 'transfer'),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Penyesuaian',
+                              active: _typeFilter == 'adjustment',
+                              activeColor: colors.adjust,
+                              colors: colors,
+                              onTap: () => setState(() => _typeFilter =
+                                  _typeFilter == 'adjustment'
+                                      ? null
+                                      : 'adjustment'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // List
+                      Expanded(
+                        child: grouped.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(child: Text('Error: $e')),
+                          data: (data) {
+                            if (data.isEmpty) {
+                              return EmptyState(
+                                icon: Icons.receipt_long_outlined,
+                                title: 'Belum ada transaksi',
+                                sub: hasActiveFilter
+                                    ? 'Tidak ada transaksi pada filter ini.'
+                                    : 'Tambah transaksi pertamamu',
+                              );
+                            }
 
-                  final sortedDays = data.keys.toList()
-                    ..sort((a, b) => b.compareTo(a));
+                            final sortedDays = data.keys.toList()
+                              ..sort((a, b) => b.compareTo(a));
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: sortedDays.length,
-                    itemBuilder: (_, i) {
-                      final day = sortedDays[i];
-                      final txs = data[day]!;
-                      return _DayGroup(
-                        day: day,
-                        transactions: txs,
-                        hidden: hidden,
-                        onTapTx: (clientId) =>
-                            context.push('/transaction/$clientId'),
-                        ref: ref,
-                      );
-                    },
-                  );
-                },
+                            return ListView.builder(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: sortedDays.length,
+                              itemBuilder: (_, i) {
+                                final day = sortedDays[i];
+                                final txs = data[day]!;
+                                return _DayGroup(
+                                  day: day,
+                                  transactions: txs,
+                                  hidden: hidden,
+                                  onTapTx: (clientId) =>
+                                      context.push('/transaction/$clientId'),
+                                  ref: ref,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_periodOpen) ...[
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () => setState(() => _periodOpen = false),
+                      ),
+                    ),
+                    Positioned(
+                      top: 44,
+                      left: 20,
+                      child: _PeriodDropdown(
+                        selected: _period,
+                        colors: colors,
+                        onSelect: _selectPeriod,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _memberName() {
-    final members = ref.read(membersProvider).value ?? [];
-    return members.firstWhere((m) => m.id == _memberFilter,
-        orElse: () => const Member(
-              id: 0,
-              name: 'Anggota',
-              email: '',
-              role: '',
-              avatarHue: 0,
-            )).name;
   }
 }
 
@@ -322,7 +347,7 @@ class _DayGroup extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: AppRadius.borderRadiusBase,
+            borderRadius: AppRadius.borderRadiusSm,
             border: Border.all(color: colors.border),
           ),
           child: Column(
@@ -362,32 +387,22 @@ class _DayGroup extends StatelessWidget {
                     ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TxRow(
-                            type: tx.type,
-                            categoryName: cat?.name ?? txMeta.label,
-                            categoryIconKey: cat?.icon ?? _typeIconKey(tx.type),
-                            categoryHue: cat?.hue ?? _typeHue(tx.type, context.appColors),
-                            recorderInitial: recorder?.name ?? '?',
-                            recorderHue: recorder?.avatarHue ?? 162,
-                            title: cat?.name ?? txMeta.label,
-                            walletName: walletName,
-                            note: tx.note,
-                            spentByName: spentByMember?.name,
-                            amount: tx.amount,
-                            hidden: hidden,
-                            onTap: () => onTapTx(tx.clientId),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Time
-                        Text(
-                          timeLabel(tx.date),
-                          style: AppText.micro(color: colors.text3),
-                        ),
-                      ],
+                    child: TxRow(
+                      type: tx.type,
+                      categoryName: cat?.name ?? txMeta.label,
+                      categoryIconKey: cat?.icon ?? _typeIconKey(tx.type),
+                      categoryHue:
+                          cat?.hue ?? _typeHue(tx.type, context.appColors),
+                      recorderInitial: recorder?.name ?? '?',
+                      recorderHue: recorder?.avatarHue ?? 162,
+                      title: cat?.name ?? txMeta.label,
+                      walletName: walletName,
+                      note: tx.note,
+                      spentByName: spentByMember?.name,
+                      amount: tx.amount,
+                      hidden: hidden,
+                      time: timeLabel(tx.date),
+                      onTap: () => onTapTx(tx.clientId),
                     ),
                   ),
                 ],
@@ -534,142 +549,154 @@ class _FilterChip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Member filter sheet
+// Period pill
 // ---------------------------------------------------------------------------
 
-class _MemberFilterSheet extends StatelessWidget {
-  const _MemberFilterSheet({
-    required this.members,
-    required this.selected,
+class _PeriodPill extends StatelessWidget {
+  const _PeriodPill({
+    required this.label,
+    required this.active,
+    required this.colors,
+    required this.onTap,
   });
 
-  final List<Member> members;
-  final int? selected;
+  final String label;
+  final bool active;
+  final AppColors colors;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Text('Filter Anggota',
-              style: AppText.cardTitle(color: colors.text)),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: active ? colors.primaryTint : colors.surface,
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(
+            color: active ? colors.primary : colors.border,
+          ),
         ),
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-          leading: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colors.surface2,
-              shape: BoxShape.circle,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 16,
+              color: active ? colors.primary : colors.text2,
             ),
-            child: Icon(Icons.group_outlined, color: colors.text3, size: 18),
-          ),
-          title: Text('Semua anggota', style: AppText.body(color: colors.text)),
-          trailing: selected == null
-              ? Icon(Icons.check_rounded, color: colors.primary)
-              : null,
-          onTap: () => Navigator.of(context).pop(-1),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: active ? colors.primary : colors.text2,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: active ? colors.primary : colors.text3,
+            ),
+          ],
         ),
-        ...members.map(
-          (m) => ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            leading: MemberAvatar(
-                hue: m.avatarHue, initial: m.name, size: 36),
-            title: Text(m.name, style: AppText.body(color: colors.text)),
-            trailing: selected == m.id
-                ? Icon(Icons.check_rounded, color: colors.primary)
-                : null,
-            onTap: () => Navigator.of(context).pop(m.id),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
+      ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Month picker sheet
+// Period dropdown
 // ---------------------------------------------------------------------------
 
-class _MonthPickerSheet extends StatelessWidget {
-  const _MonthPickerSheet({
-    required this.months,
+class _PeriodDropdown extends StatelessWidget {
+  const _PeriodDropdown({
     required this.selected,
+    required this.colors,
+    required this.onSelect,
   });
 
-  final List<String> months;
-  final String? selected;
-
-  String _label(String ym) {
-    final parts = ym.split('-');
-    const names = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${names[int.parse(parts[1]) - 1]} ${parts[0]}';
-  }
+  final String selected;
+  final AppColors colors;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Text('Filter Bulan',
-              style: AppText.cardTitle(color: colors.text)),
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 224,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: AppRadius.borderRadiusSm,
+          border: Border.all(color: colors.border2),
+          boxShadow: AppShadows.lg,
         ),
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-          leading: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colors.surface2,
-              shape: BoxShape.circle,
-            ),
-            child:
-                Icon(Icons.calendar_today_outlined, color: colors.text3, size: 18),
-          ),
-          title:
-              Text('Semua Bulan', style: AppText.body(color: colors.text)),
-          trailing: selected == null
-              ? Icon(Icons.check_rounded, color: colors.primary)
-              : null,
-          onTap: () => Navigator.of(context).pop(''),
-        ),
-        ...months.map(
-          (ym) => ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: colors.surface2,
-                shape: BoxShape.circle,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < _periodOptions.length; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              _PeriodDropdownItem(
+                label: _periodOptions[i].$2,
+                active: selected == _periodOptions[i].$1,
+                colors: colors,
+                onTap: () => onSelect(_periodOptions[i].$1),
               ),
-              child: Icon(Icons.calendar_month_outlined,
-                  color: colors.text3, size: 18),
-            ),
-            title: Text(_label(ym), style: AppText.body(color: colors.text)),
-            trailing: selected == ym
-                ? Icon(Icons.check_rounded, color: colors.primary)
-                : null,
-            onTap: () => Navigator.of(context).pop(ym),
-          ),
+            ],
+          ],
         ),
-        const SizedBox(height: 16),
-      ],
+      ),
+    );
+  }
+}
+
+class _PeriodDropdownItem extends StatelessWidget {
+  const _PeriodDropdownItem({
+    required this.label,
+    required this.active,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final AppColors colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? colors.primaryTint : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? colors.primary : colors.text2,
+              ),
+            ),
+            if (active)
+              Icon(Icons.check_rounded, size: 16, color: colors.primary),
+          ],
+        ),
+      ),
     );
   }
 }

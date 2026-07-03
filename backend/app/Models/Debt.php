@@ -22,6 +22,7 @@ class Debt extends Model
         'status',
         'note',
         'wallet_id',
+        'client_ref',
     ];
 
     protected function casts(): array

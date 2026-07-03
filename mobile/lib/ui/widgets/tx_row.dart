@@ -27,6 +27,7 @@ class TxRow extends StatelessWidget {
     this.spentByName,
     required this.amount,
     required this.hidden,
+    this.time,
     this.onTap,
   });
 
@@ -42,6 +43,7 @@ class TxRow extends StatelessWidget {
   final String? spentByName;
   final int amount;
   final bool hidden;
+  final String? time;
   final VoidCallback? onTap;
 
   @override
@@ -130,16 +132,34 @@ class TxRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Amount
-            Text(
-              amountText,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.15,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: meta.color,
-              ),
+            // Amount + time
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  amountText,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.15,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: meta.color,
+                  ),
+                ),
+                if (time != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      time!,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: colors.text3,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),

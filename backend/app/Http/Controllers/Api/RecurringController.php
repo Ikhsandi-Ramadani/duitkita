@@ -35,6 +35,18 @@ class RecurringController extends Controller
         $data['household_id'] = $request->user()->household_id;
         $data['created_by']   = $request->user()->id;
 
+        // Mobile's local pseudo-id doubles as an idempotency key — a
+        // retried/duplicated POST for the same locally-created rule must
+        // not create a second permanent row.
+        if (!empty($data['client_ref'])) {
+            $existing = Recurring::where('household_id', $data['household_id'])
+                ->where('client_ref', $data['client_ref'])
+                ->first();
+            if ($existing) {
+                return response()->json(new RecurringResource($existing), 200);
+            }
+        }
+
         $recurring = Recurring::create($data);
 
         return response()->json(new RecurringResource($recurring), 201);

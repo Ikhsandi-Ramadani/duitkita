@@ -43,7 +43,10 @@ class DebtRepository {
   Future<void> replaceWithServerId(int localId, int serverId) async {
     if (localId == serverId) {
       await (_db.update(_db.debts)..where((t) => t.id.equals(localId)))
-          .write(const DebtsCompanion(pendingSync: Value(false)));
+          .write(const DebtsCompanion(
+        pendingSync: Value(false),
+        everSynced: Value(true),
+      ));
       return;
     }
     final row = await getById(localId);
@@ -64,6 +67,7 @@ class DebtRepository {
             walletId: Value(row.walletId),
             deleted: Value(row.deleted),
             pendingSync: const Value(false),
+            everSynced: const Value(true),
           ));
     });
   }
@@ -110,6 +114,7 @@ class DebtRepository {
           .write(DebtsCompanion(
         paid: Value(newPaid),
         status: Value(newStatus),
+        pendingSync: const Value(true),
       ));
     });
   }

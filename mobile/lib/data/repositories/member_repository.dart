@@ -29,4 +29,13 @@ class MemberRepository {
   Future<void> deleteById(int id) async {
     await (_db.delete(_db.members)..where((m) => m.id.equals(id))).go();
   }
+
+  /// Removes any local member NOT in [keepIds]. The server's members query is
+  /// always the full current household roster (never date-filtered), so this
+  /// is safe to run after every pull — it's how a member removed by another
+  /// device stops showing up as a permanent zombie in pickers.
+  Future<void> deleteAllExcept(List<int> keepIds) async {
+    if (keepIds.isEmpty) return;
+    await (_db.delete(_db.members)..where((m) => m.id.isNotIn(keepIds))).go();
+  }
 }

@@ -85,12 +85,15 @@ class SyncService {
     }
   }
 
-  /// Push all pending (pendingSync=true) debts to the server.
+  /// Push all pending (pendingSync=true) debts to the server. A row with
+  /// everSynced=true already has a real server id — this must PUT (update),
+  /// never POST again, or every edit (e.g. marking a debt paid) creates a
+  /// duplicate row server-side and orphans the original.
   Future<void> pushPendingDebts() async {
     final pending = await debtRepo.getPendingSync();
     for (final d in pending) {
       try {
-        final result = await api.createDebt({
+        final body = {
           'type': d.type,
           'party_name': d.partyName,
           'amount': d.amount,
@@ -98,10 +101,18 @@ class SyncService {
           'due_date': d.dueDate?.toUtc().toIso8601String(),
           'note': d.note,
           'wallet_id': d.walletId,
-        });
-        final serverId = result['id'] as int?;
-        if (serverId != null) {
-          await debtRepo.replaceWithServerId(d.id, serverId);
+          'paid': d.paid,
+          'status': d.status,
+        };
+        if (d.everSynced) {
+          await api.updateDebt(d.id, body);
+          await debtRepo.replaceWithServerId(d.id, d.id);
+        } else {
+          final result = await api.createDebt({...body, 'client_ref': d.id});
+          final serverId = result['id'] as int?;
+          if (serverId != null) {
+            await debtRepo.replaceWithServerId(d.id, serverId);
+          }
         }
       } catch (e) {
         if (kDebugMode) print('[Sync] debt push error (id=${d.id}): $e');
@@ -109,12 +120,13 @@ class SyncService {
     }
   }
 
-  /// Push all pending (pendingSync=true) recurring rules to the server.
+  /// Push all pending (pendingSync=true) recurring rules to the server. Same
+  /// create-vs-update branch as debts — see pushPendingDebts.
   Future<void> pushPendingRecurrings() async {
     final pending = await recurringRepo.getPendingSync();
     for (final r in pending) {
       try {
-        final result = await api.createRecurring({
+        final body = {
           'type': r.type,
           'wallet_id': r.walletId,
           'category_id': r.categoryId,
@@ -124,10 +136,17 @@ class SyncService {
           'end_date': r.endDate?.toUtc().toIso8601String(),
           'auto_create': r.autoCreate,
           'note': r.note,
-        });
-        final serverId = result['id'] as int?;
-        if (serverId != null) {
-          await recurringRepo.replaceWithServerId(r.id, serverId);
+        };
+        if (r.everSynced) {
+          await api.updateRecurring(r.id, body);
+          await recurringRepo.replaceWithServerId(r.id, r.id);
+        } else {
+          final result =
+              await api.createRecurring({...body, 'client_ref': r.id});
+          final serverId = result['id'] as int?;
+          if (serverId != null) {
+            await recurringRepo.replaceWithServerId(r.id, serverId);
+          }
         }
       } catch (e) {
         if (kDebugMode) print('[Sync] recurring push error (id=${r.id}): $e');
@@ -135,23 +154,82 @@ class SyncService {
     }
   }
 
-  /// Push all pending (pendingSync=true) budgets to the server.
+  /// Push all pending (pendingSync=true) budgets to the server: create,
+  /// update, or delete depending on the row's state. A deleted budget that
+  /// was never synced just gets hard-deleted locally (server never had it);
+  /// deletion of an already-synced budget must reach the server or it
+  /// resurrects on the next pull.
   Future<void> pushPendingBudgets() async {
     final pending = await budgetRepo.getPendingSync();
     for (final b in pending) {
       try {
-        final result = await api.createBudget({
+        if (b.deleted) {
+          if (b.everSynced) {
+            await api.deleteBudget(b.id);
+          }
+          await budgetRepo.hardDelete(b.id);
+          continue;
+        }
+
+        final body = {
           'scope': b.scope,
           'category_id': b.categoryId,
           'amount': b.amount,
           'period_month': b.periodMonth,
-        });
-        final serverId = result['id'] as int?;
-        if (serverId != null) {
-          await budgetRepo.replaceWithServerId(b.id, serverId);
+        };
+        if (b.everSynced) {
+          await api.updateBudget(b.id, body);
+          await budgetRepo.replaceWithServerId(b.id, b.id);
+        } else {
+          final result = await api.createBudget(body);
+          final serverId = result['id'] as int?;
+          if (serverId != null) {
+            await budgetRepo.replaceWithServerId(b.id, serverId);
+          }
         }
       } catch (e) {
         if (kDebugMode) print('[Sync] budget push error (id=${b.id}): $e');
+      }
+    }
+  }
+
+  /// Push all pending (pendingSync=true) savings goals to the server: create,
+  /// update, or delete depending on the row's state. Contributions bump
+  /// currentAmount and mark pendingSync=true the same way as create/edit.
+  Future<void> pushPendingGoals() async {
+    final pending = await goalRepo.getPendingSync();
+    for (final g in pending) {
+      try {
+        if (g.deleted) {
+          if (g.everSynced) {
+            await api.deleteGoal(g.id);
+          }
+          await goalRepo.hardDelete(g.id);
+          continue;
+        }
+
+        final body = {
+          'scope': g.scope,
+          'name': g.name,
+          'target_amount': g.targetAmount,
+          'current_amount': g.currentAmount,
+          'target_date': g.targetDate?.toUtc().toIso8601String(),
+          'wallet_id': g.walletId,
+          'icon': g.icon,
+          'hue': g.hue,
+        };
+        if (g.everSynced) {
+          await api.updateGoal(g.id, body);
+          await goalRepo.replaceWithServerId(g.id, g.id);
+        } else {
+          final result = await api.createGoal(body);
+          final serverId = result['id'] as int?;
+          if (serverId != null) {
+            await goalRepo.replaceWithServerId(g.id, serverId);
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) print('[Sync] goal push error (id=${g.id}): $e');
       }
     }
   }
@@ -162,6 +240,7 @@ class SyncService {
     await pushPendingDebts();
     await pushPendingRecurrings();
     await pushPendingBudgets();
+    await pushPendingGoals();
   }
 
   /// True if any entity still has unsynced local writes.
@@ -173,7 +252,9 @@ class SyncService {
     final recs = await recurringRepo.getPendingSync();
     if (recs.isNotEmpty) return true;
     final budgets = await budgetRepo.getPendingSync();
-    return budgets.isNotEmpty;
+    if (budgets.isNotEmpty) return true;
+    final goals = await goalRepo.getPendingSync();
+    return goals.isNotEmpty;
   }
 
   /// Pull all entity updates from server since [lastSyncAt].
@@ -227,6 +308,12 @@ class SyncService {
                   avatarPath: Value(m['avatar_path'] as String?),
                 ))
             .toList());
+        // Server always returns the full current roster (never date-filtered)
+        // — anyone removed from the household by another device is simply
+        // absent, so purge local rows not in this list instead of leaving a
+        // permanent zombie member in pickers.
+        await memberRepo
+            .deleteAllExcept(members.map((m) => _toInt(m['id'])).toList());
       } catch (e) {
         if (kDebugMode) print('[Sync] member upsert error: $e');
       }
@@ -266,6 +353,7 @@ class SyncService {
                   icon: Value((c['icon'] as String?) ?? ''),
                   hue: Value(_toInt(c['hue'])),
                   parentId: Value(c['parent_id'] as int?),
+                  deleted: Value((c['deleted'] as bool?) ?? false),
                 ))
             .toList());
       } catch (e) {
@@ -318,6 +406,7 @@ class SyncService {
                   amount: Value(_toInt(b['amount'])),
                   periodMonth: Value((b['period_month'] as String?) ?? ''),
                   pendingSync: const Value(false),
+                  everSynced: const Value(true),
                 ))
             .toList());
       } catch (e) {
@@ -345,6 +434,8 @@ class SyncService {
                   icon: Value((g['icon'] as String?) ?? ''),
                   hue: Value(_toInt(g['hue'])),
                   deleted: Value((g['deleted'] as bool?) ?? false),
+                  pendingSync: const Value(false),
+                  everSynced: const Value(true),
                 ))
             .toList());
       } catch (e) {
@@ -373,6 +464,7 @@ class SyncService {
                   walletId: Value(d['wallet_id'] as int?),
                   deleted: Value((d['deleted'] as bool?) ?? false),
                   pendingSync: const Value(false),
+                  everSynced: const Value(true),
                 ))
             .toList());
       } catch (e) {
@@ -400,6 +492,7 @@ class SyncService {
                   note: Value(r['note'] as String?),
                   createdBy: Value(_toInt(r['created_by'])),
                   pendingSync: const Value(false),
+                  everSynced: const Value(true),
                 ))
             .toList());
       } catch (e) {

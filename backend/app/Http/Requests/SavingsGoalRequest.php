@@ -21,6 +21,11 @@ class SavingsGoalRequest extends FormRequest
             'wallet_id'     => ['required', 'integer', 'exists:wallets,id'],
             'icon'          => ['required', 'string', 'max:50'],
             'hue'           => ['required', 'integer', 'min:0', 'max:360'],
+            // Only settable via a plain update when mirroring a contribution
+            // already recorded as a transaction elsewhere (mobile offline
+            // sync) — the dedicated /contribute endpoint is for the case
+            // where the server itself must create that transaction.
+            'current_amount' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }

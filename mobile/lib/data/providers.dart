@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart' hide Category, Notification;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'db/app_database.dart';
 import 'db/seed.dart';
 import 'api/api_client.dart';
@@ -81,7 +82,23 @@ final aliceProvider = Provider<Alice?>((ref) {
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
   final aliceAdapter = ref.watch(aliceDioAdapterProvider);
-  return ApiClient(storage: storage, aliceAdapter: aliceAdapter);
+  final navigatorKey = ref.watch(appNavigatorKeyProvider);
+  late final ApiClient client;
+  client = ApiClient(
+    storage: storage,
+    aliceAdapter: aliceAdapter,
+    onUnauthorized: () {
+      // A 401 here means the token was revoked server-side (e.g. removed
+      // from the household) — without forcing a logout, the app just shows
+      // confusing empty lists everywhere instead of a clean sign-out.
+      client.clearToken();
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        context.go('/login');
+      }
+    },
+  );
+  return client;
 });
 
 // ---------------------------------------------------------------------------

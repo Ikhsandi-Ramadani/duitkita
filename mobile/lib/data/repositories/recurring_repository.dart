@@ -37,7 +37,10 @@ class RecurringRepository {
   Future<void> replaceWithServerId(int localId, int serverId) async {
     if (localId == serverId) {
       await (_db.update(_db.recurrings)..where((t) => t.id.equals(localId)))
-          .write(const RecurringsCompanion(pendingSync: Value(false)));
+          .write(const RecurringsCompanion(
+        pendingSync: Value(false),
+        everSynced: Value(true),
+      ));
       return;
     }
     final row = await getById(localId);
@@ -59,6 +62,7 @@ class RecurringRepository {
               note: Value(row.note),
               createdBy: row.createdBy,
               pendingSync: const Value(false),
+              everSynced: const Value(true),
             ),
           );
     });

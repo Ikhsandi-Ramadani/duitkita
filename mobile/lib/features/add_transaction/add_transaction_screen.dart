@@ -199,7 +199,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           targetWalletId: _targetWallet?.id,
           categoryId: _category?.id,
           amount: saveAmount,
-          date: now,
+          date: _editingTx!.date,
           note: _note.isNotEmpty ? _note : null,
           spentBy: spentById,
         );

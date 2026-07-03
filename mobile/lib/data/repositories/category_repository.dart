@@ -5,16 +5,25 @@ class CategoryRepository {
   CategoryRepository(this._db);
   final AppDatabase _db;
 
-  Stream<List<Category>> watchAll() => _db.select(_db.categories).watch();
+  Stream<List<Category>> watchAll() {
+    return (_db.select(_db.categories)..where((t) => t.deleted.equals(false)))
+        .watch();
+  }
 
-  Future<List<Category>> getAll() => _db.select(_db.categories).get();
+  Future<List<Category>> getAll() {
+    return (_db.select(_db.categories)..where((t) => t.deleted.equals(false)))
+        .get();
+  }
 
   Future<List<Category>> getByType(String type) {
-    return (_db.select(_db.categories)..where((t) => t.type.equals(type))).get();
+    return (_db.select(_db.categories)
+          ..where((t) => t.type.equals(type) & t.deleted.equals(false)))
+        .get();
   }
 
   Stream<List<Category>> watchByType(String type) {
-    return (_db.select(_db.categories)..where((t) => t.type.equals(type)))
+    return (_db.select(_db.categories)
+          ..where((t) => t.type.equals(type) & t.deleted.equals(false)))
         .watch();
   }
 

@@ -35,6 +35,18 @@ class DebtController extends Controller
         $data['household_id']   = $request->user()->household_id;
         $data['owner_user_id']  = $request->user()->id;
 
+        // Mobile's local pseudo-id doubles as an idempotency key — a
+        // retried/duplicated POST (network retry, double-tap) for the same
+        // locally-created debt must not create a second permanent row.
+        if (!empty($data['client_ref'])) {
+            $existing = Debt::where('household_id', $data['household_id'])
+                ->where('client_ref', $data['client_ref'])
+                ->first();
+            if ($existing) {
+                return response()->json(new DebtResource($existing), 200);
+            }
+        }
+
         $debt = Debt::create($data);
 
         return response()->json(new DebtResource($debt), 201);

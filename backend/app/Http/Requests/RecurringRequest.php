@@ -23,6 +23,7 @@ class RecurringRequest extends FormRequest
             'end_date'      => ['nullable', 'date', 'after:next_run_date'],
             'auto_create'   => ['nullable', 'boolean'],
             'note'          => ['nullable', 'string', 'max:500'],
+            'client_ref'    => ['sometimes', 'nullable', 'integer'],
         ];
     }
 }

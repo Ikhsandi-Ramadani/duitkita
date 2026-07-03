@@ -8,16 +8,16 @@ const _uuid = Uuid();
 class TransactionFilters {
   const TransactionFilters({
     this.type,
-    this.memberId,
     this.search,
     this.walletId,
-    this.month,
+    this.dateFrom,
+    this.dateTo,
   });
   final String? type;
-  final int? memberId;
   final String? search;
   final int? walletId;
-  final String? month; // 'YYYY-MM'
+  final DateTime? dateFrom; // inclusive
+  final DateTime? dateTo; // exclusive
 
   @override
   bool operator ==(Object other) =>
@@ -25,14 +25,14 @@ class TransactionFilters {
       other is TransactionFilters &&
           runtimeType == other.runtimeType &&
           type == other.type &&
-          memberId == other.memberId &&
           search == other.search &&
           walletId == other.walletId &&
-          month == other.month;
+          dateFrom == other.dateFrom &&
+          dateTo == other.dateTo;
 
   @override
   int get hashCode =>
-      Object.hash(type, memberId, search, walletId, month);
+      Object.hash(type, search, walletId, dateFrom, dateTo);
 }
 
 class MonthlyTotal {
@@ -241,24 +241,14 @@ class TransactionRepository {
     if (filters.type != null) {
       query.where((t) => t.type.equals(filters.type!));
     }
-    if (filters.memberId != null) {
-      query.where((t) =>
-          t.recordedBy.equals(filters.memberId!) |
-          t.spentBy.equalsNullable(filters.memberId));
-    }
     if (filters.walletId != null) {
       query.where((t) => t.walletId.equals(filters.walletId!));
     }
-    if (filters.month != null) {
-      // filter by YYYY-MM prefix using date range
-      final parts = filters.month!.split('-');
-      final year = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      final start = DateTime(year, month, 1);
-      final end = DateTime(year, month + 1, 1);
-      query.where((t) =>
-          t.date.isBiggerOrEqualValue(start) &
-          t.date.isSmallerThanValue(end));
+    if (filters.dateFrom != null) {
+      query.where((t) => t.date.isBiggerOrEqualValue(filters.dateFrom!));
+    }
+    if (filters.dateTo != null) {
+      query.where((t) => t.date.isSmallerThanValue(filters.dateTo!));
     }
 
     query.orderBy([(t) => OrderingTerm.desc(t.date)]);

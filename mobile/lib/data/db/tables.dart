@@ -44,6 +44,7 @@ class Categories extends Table {
   TextColumn get icon => text()();
   IntColumn get hue => integer()();
   IntColumn get parentId => integer().nullable()();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -84,6 +85,8 @@ class Budgets extends Table {
   IntColumn get amount => integer()();
   TextColumn get periodMonth => text()(); // YYYY-MM
   BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get everSynced => boolean().withDefault(const Constant(false))();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -104,6 +107,8 @@ class SavingsGoals extends Table {
   TextColumn get icon => text()();
   IntColumn get hue => integer()();
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+  BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get everSynced => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -126,6 +131,7 @@ class Debts extends Table {
   IntColumn get walletId => integer().nullable()();
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();
   BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get everSynced => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -147,6 +153,7 @@ class Recurrings extends Table {
   TextColumn get note => text().nullable()();
   IntColumn get createdBy => integer()();
   BoolColumn get pendingSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get everSynced => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

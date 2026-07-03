@@ -270,6 +270,9 @@ class AuthController extends Controller
                 'household_id' => null,
                 'role'         => 'member',
             ]);
+            // Without this the removed member keeps a live session and can
+            // keep hitting every authenticated endpoint as if nothing happened.
+            $target->tokens()->delete();
         });
 
         return response()->json(['message' => 'Anggota berhasil dihapus']);

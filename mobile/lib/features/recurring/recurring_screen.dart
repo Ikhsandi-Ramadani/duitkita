@@ -240,6 +240,7 @@ class _RecurringCardState extends State<_RecurringCard> {
             RecurringsCompanion(
               id: Value(r.id),
               nextRunDate: Value(next),
+              pendingSync: const Value(true),
             ),
           );
 
@@ -262,6 +263,7 @@ class _RecurringCardState extends State<_RecurringCard> {
             RecurringsCompanion(
               id: Value(widget.recurring.id),
               autoCreate: Value(value),
+              pendingSync: const Value(true),
             ),
           );
     } catch (e) {

@@ -21,6 +21,9 @@ class DebtRequest extends FormRequest
             'due_date'   => ['nullable', 'date'],
             'note'       => ['nullable', 'string', 'max:500'],
             'wallet_id'  => ['nullable', 'integer', 'exists:wallets,id'],
+            'paid'       => ['sometimes', 'integer', 'min:0'],
+            'status'     => ['sometimes', 'in:ongoing,paid'],
+            'client_ref' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 }

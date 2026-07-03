@@ -478,6 +478,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
             walletId: _walletId!,
             icon: _icon,
             hue: 162,
+            pendingSync: const Value(true),
           ),
         );
 

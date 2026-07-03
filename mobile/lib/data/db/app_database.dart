@@ -22,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'duitkita'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,6 +41,23 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(budgets, budgets.pendingSync);
+          }
+          if (from < 6) {
+            await m.addColumn(debts, debts.everSynced);
+            await m.addColumn(recurrings, recurrings.everSynced);
+            await m.addColumn(budgets, budgets.everSynced);
+            await m.addColumn(budgets, budgets.deleted);
+            await m.addColumn(savingsGoals, savingsGoals.pendingSync);
+            await m.addColumn(savingsGoals, savingsGoals.everSynced);
+            // Rows already synced before this migration (pendingSync=false)
+            // already have a real server id — backfill everSynced so the next
+            // edit routes to an UPDATE call instead of creating a duplicate.
+            await customStatement('UPDATE debts SET ever_synced = 1 WHERE pending_sync = 0');
+            await customStatement('UPDATE recurrings SET ever_synced = 1 WHERE pending_sync = 0');
+            await customStatement('UPDATE budgets SET ever_synced = 1 WHERE pending_sync = 0');
+          }
+          if (from < 7) {
+            await m.addColumn(categories, categories.deleted);
           }
         },
       );

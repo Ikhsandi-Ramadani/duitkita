@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -149,14 +148,11 @@ class _BudgetBodyState extends State<_BudgetBody> {
 
   Future<void> _deleteBudget(Budget budget) async {
     final repo = widget.ref.read(budgetRepoProvider);
-    final api = widget.ref.read(apiClientProvider);
-    try {
-      await api.deleteBudget(budget.id);
-    } catch (e) {
-      // Silently continue — delete locally even if API fails (offline-first)
-      if (kDebugMode) print('[Budget] deleteBudget error: $e');
-    }
-    await repo.delete(budget.id);
+    // Soft-delete + queue for push, matching the offline-first pattern used
+    // everywhere else — a hard local delete with a best-effort API call meant
+    // an offline/failed delete never reached the server and the budget
+    // resurrected on the next pull.
+    await repo.softDelete(budget.id);
     if (mounted) {
       AppToast.show(context, 'Anggaran dihapus');
     }

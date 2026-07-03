@@ -19,6 +19,7 @@ class Recurring extends Model
         'auto_create',
         'note',
         'created_by',
+        'client_ref',
     ];
 
     protected function casts(): array

@@ -1056,8 +1056,31 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, type, icon, hue, parentId];
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    icon,
+    hue,
+    parentId,
+    deleted,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1111,6 +1134,12 @@ class $CategoriesTable extends Categories
         parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
       );
     }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
     return context;
   }
 
@@ -1144,6 +1173,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.int,
         data['${effectivePrefix}parent_id'],
       ),
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
     );
   }
 
@@ -1160,6 +1193,7 @@ class Category extends DataClass implements Insertable<Category> {
   final String icon;
   final int hue;
   final int? parentId;
+  final bool deleted;
   const Category({
     required this.id,
     required this.name,
@@ -1167,6 +1201,7 @@ class Category extends DataClass implements Insertable<Category> {
     required this.icon,
     required this.hue,
     this.parentId,
+    required this.deleted,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1179,6 +1214,7 @@ class Category extends DataClass implements Insertable<Category> {
     if (!nullToAbsent || parentId != null) {
       map['parent_id'] = Variable<int>(parentId);
     }
+    map['deleted'] = Variable<bool>(deleted);
     return map;
   }
 
@@ -1192,6 +1228,7 @@ class Category extends DataClass implements Insertable<Category> {
       parentId: parentId == null && nullToAbsent
           ? const Value.absent()
           : Value(parentId),
+      deleted: Value(deleted),
     );
   }
 
@@ -1207,6 +1244,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: serializer.fromJson<String>(json['icon']),
       hue: serializer.fromJson<int>(json['hue']),
       parentId: serializer.fromJson<int?>(json['parentId']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
     );
   }
   @override
@@ -1219,6 +1257,7 @@ class Category extends DataClass implements Insertable<Category> {
       'icon': serializer.toJson<String>(icon),
       'hue': serializer.toJson<int>(hue),
       'parentId': serializer.toJson<int?>(parentId),
+      'deleted': serializer.toJson<bool>(deleted),
     };
   }
 
@@ -1229,6 +1268,7 @@ class Category extends DataClass implements Insertable<Category> {
     String? icon,
     int? hue,
     Value<int?> parentId = const Value.absent(),
+    bool? deleted,
   }) => Category(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1236,6 +1276,7 @@ class Category extends DataClass implements Insertable<Category> {
     icon: icon ?? this.icon,
     hue: hue ?? this.hue,
     parentId: parentId.present ? parentId.value : this.parentId,
+    deleted: deleted ?? this.deleted,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -1245,6 +1286,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: data.icon.present ? data.icon.value : this.icon,
       hue: data.hue.present ? data.hue.value : this.hue,
       parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
     );
   }
 
@@ -1256,13 +1298,14 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('type: $type, ')
           ..write('icon: $icon, ')
           ..write('hue: $hue, ')
-          ..write('parentId: $parentId')
+          ..write('parentId: $parentId, ')
+          ..write('deleted: $deleted')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, icon, hue, parentId);
+  int get hashCode => Object.hash(id, name, type, icon, hue, parentId, deleted);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1272,7 +1315,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.type == this.type &&
           other.icon == this.icon &&
           other.hue == this.hue &&
-          other.parentId == this.parentId);
+          other.parentId == this.parentId &&
+          other.deleted == this.deleted);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -1282,6 +1326,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> icon;
   final Value<int> hue;
   final Value<int?> parentId;
+  final Value<bool> deleted;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -1289,6 +1334,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.icon = const Value.absent(),
     this.hue = const Value.absent(),
     this.parentId = const Value.absent(),
+    this.deleted = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
@@ -1297,6 +1343,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     required String icon,
     required int hue,
     this.parentId = const Value.absent(),
+    this.deleted = const Value.absent(),
   }) : name = Value(name),
        type = Value(type),
        icon = Value(icon),
@@ -1308,6 +1355,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? icon,
     Expression<int>? hue,
     Expression<int>? parentId,
+    Expression<bool>? deleted,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1316,6 +1364,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (icon != null) 'icon': icon,
       if (hue != null) 'hue': hue,
       if (parentId != null) 'parent_id': parentId,
+      if (deleted != null) 'deleted': deleted,
     });
   }
 
@@ -1326,6 +1375,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? icon,
     Value<int>? hue,
     Value<int?>? parentId,
+    Value<bool>? deleted,
   }) {
     return CategoriesCompanion(
       id: id ?? this.id,
@@ -1334,6 +1384,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       icon: icon ?? this.icon,
       hue: hue ?? this.hue,
       parentId: parentId ?? this.parentId,
+      deleted: deleted ?? this.deleted,
     );
   }
 
@@ -1358,6 +1409,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (parentId.present) {
       map['parent_id'] = Variable<int>(parentId.value);
     }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
     return map;
   }
 
@@ -1369,7 +1423,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('type: $type, ')
           ..write('icon: $icon, ')
           ..write('hue: $hue, ')
-          ..write('parentId: $parentId')
+          ..write('parentId: $parentId, ')
+          ..write('deleted: $deleted')
           ..write(')'))
         .toString();
   }
@@ -2327,6 +2382,36 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _everSyncedMeta = const VerificationMeta(
+    'everSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> everSynced = GeneratedColumn<bool>(
+    'ever_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ever_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2336,6 +2421,8 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     amount,
     periodMonth,
     pendingSync,
+    everSynced,
+    deleted,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2405,6 +2492,18 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
         ),
       );
     }
+    if (data.containsKey('ever_synced')) {
+      context.handle(
+        _everSyncedMeta,
+        everSynced.isAcceptableOrUnknown(data['ever_synced']!, _everSyncedMeta),
+      );
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
     return context;
   }
 
@@ -2442,6 +2541,14 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
         DriftSqlType.bool,
         data['${effectivePrefix}pending_sync'],
       )!,
+      everSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ever_synced'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
     );
   }
 
@@ -2459,6 +2566,8 @@ class Budget extends DataClass implements Insertable<Budget> {
   final int amount;
   final String periodMonth;
   final bool pendingSync;
+  final bool everSynced;
+  final bool deleted;
   const Budget({
     required this.id,
     required this.scope,
@@ -2467,6 +2576,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     required this.amount,
     required this.periodMonth,
     required this.pendingSync,
+    required this.everSynced,
+    required this.deleted,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2480,6 +2591,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     map['amount'] = Variable<int>(amount);
     map['period_month'] = Variable<String>(periodMonth);
     map['pending_sync'] = Variable<bool>(pendingSync);
+    map['ever_synced'] = Variable<bool>(everSynced);
+    map['deleted'] = Variable<bool>(deleted);
     return map;
   }
 
@@ -2494,6 +2607,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       amount: Value(amount),
       periodMonth: Value(periodMonth),
       pendingSync: Value(pendingSync),
+      everSynced: Value(everSynced),
+      deleted: Value(deleted),
     );
   }
 
@@ -2510,6 +2625,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       amount: serializer.fromJson<int>(json['amount']),
       periodMonth: serializer.fromJson<String>(json['periodMonth']),
       pendingSync: serializer.fromJson<bool>(json['pendingSync']),
+      everSynced: serializer.fromJson<bool>(json['everSynced']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
     );
   }
   @override
@@ -2523,6 +2640,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       'amount': serializer.toJson<int>(amount),
       'periodMonth': serializer.toJson<String>(periodMonth),
       'pendingSync': serializer.toJson<bool>(pendingSync),
+      'everSynced': serializer.toJson<bool>(everSynced),
+      'deleted': serializer.toJson<bool>(deleted),
     };
   }
 
@@ -2534,6 +2653,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     int? amount,
     String? periodMonth,
     bool? pendingSync,
+    bool? everSynced,
+    bool? deleted,
   }) => Budget(
     id: id ?? this.id,
     scope: scope ?? this.scope,
@@ -2542,6 +2663,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     amount: amount ?? this.amount,
     periodMonth: periodMonth ?? this.periodMonth,
     pendingSync: pendingSync ?? this.pendingSync,
+    everSynced: everSynced ?? this.everSynced,
+    deleted: deleted ?? this.deleted,
   );
   Budget copyWithCompanion(BudgetsCompanion data) {
     return Budget(
@@ -2560,6 +2683,10 @@ class Budget extends DataClass implements Insertable<Budget> {
       pendingSync: data.pendingSync.present
           ? data.pendingSync.value
           : this.pendingSync,
+      everSynced: data.everSynced.present
+          ? data.everSynced.value
+          : this.everSynced,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
     );
   }
 
@@ -2572,7 +2699,9 @@ class Budget extends DataClass implements Insertable<Budget> {
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('periodMonth: $periodMonth, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced, ')
+          ..write('deleted: $deleted')
           ..write(')'))
         .toString();
   }
@@ -2586,6 +2715,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     amount,
     periodMonth,
     pendingSync,
+    everSynced,
+    deleted,
   );
   @override
   bool operator ==(Object other) =>
@@ -2597,7 +2728,9 @@ class Budget extends DataClass implements Insertable<Budget> {
           other.categoryId == this.categoryId &&
           other.amount == this.amount &&
           other.periodMonth == this.periodMonth &&
-          other.pendingSync == this.pendingSync);
+          other.pendingSync == this.pendingSync &&
+          other.everSynced == this.everSynced &&
+          other.deleted == this.deleted);
 }
 
 class BudgetsCompanion extends UpdateCompanion<Budget> {
@@ -2608,6 +2741,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   final Value<int> amount;
   final Value<String> periodMonth;
   final Value<bool> pendingSync;
+  final Value<bool> everSynced;
+  final Value<bool> deleted;
   const BudgetsCompanion({
     this.id = const Value.absent(),
     this.scope = const Value.absent(),
@@ -2616,6 +2751,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.amount = const Value.absent(),
     this.periodMonth = const Value.absent(),
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
+    this.deleted = const Value.absent(),
   });
   BudgetsCompanion.insert({
     this.id = const Value.absent(),
@@ -2625,6 +2762,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     required int amount,
     required String periodMonth,
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
+    this.deleted = const Value.absent(),
   }) : scope = Value(scope),
        categoryId = Value(categoryId),
        amount = Value(amount),
@@ -2637,6 +2776,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Expression<int>? amount,
     Expression<String>? periodMonth,
     Expression<bool>? pendingSync,
+    Expression<bool>? everSynced,
+    Expression<bool>? deleted,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2646,6 +2787,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       if (amount != null) 'amount': amount,
       if (periodMonth != null) 'period_month': periodMonth,
       if (pendingSync != null) 'pending_sync': pendingSync,
+      if (everSynced != null) 'ever_synced': everSynced,
+      if (deleted != null) 'deleted': deleted,
     });
   }
 
@@ -2657,6 +2800,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Value<int>? amount,
     Value<String>? periodMonth,
     Value<bool>? pendingSync,
+    Value<bool>? everSynced,
+    Value<bool>? deleted,
   }) {
     return BudgetsCompanion(
       id: id ?? this.id,
@@ -2666,6 +2811,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       amount: amount ?? this.amount,
       periodMonth: periodMonth ?? this.periodMonth,
       pendingSync: pendingSync ?? this.pendingSync,
+      everSynced: everSynced ?? this.everSynced,
+      deleted: deleted ?? this.deleted,
     );
   }
 
@@ -2693,6 +2840,12 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     if (pendingSync.present) {
       map['pending_sync'] = Variable<bool>(pendingSync.value);
     }
+    if (everSynced.present) {
+      map['ever_synced'] = Variable<bool>(everSynced.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
     return map;
   }
 
@@ -2705,7 +2858,9 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('periodMonth: $periodMonth, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced, ')
+          ..write('deleted: $deleted')
           ..write(')'))
         .toString();
   }
@@ -2832,6 +2987,36 @@ class $SavingsGoalsTable extends SavingsGoals
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _pendingSyncMeta = const VerificationMeta(
+    'pendingSync',
+  );
+  @override
+  late final GeneratedColumn<bool> pendingSync = GeneratedColumn<bool>(
+    'pending_sync',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pending_sync" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _everSyncedMeta = const VerificationMeta(
+    'everSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> everSynced = GeneratedColumn<bool>(
+    'ever_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ever_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2845,6 +3030,8 @@ class $SavingsGoalsTable extends SavingsGoals
     icon,
     hue,
     deleted,
+    pendingSync,
+    everSynced,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2944,6 +3131,21 @@ class $SavingsGoalsTable extends SavingsGoals
         deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
       );
     }
+    if (data.containsKey('pending_sync')) {
+      context.handle(
+        _pendingSyncMeta,
+        pendingSync.isAcceptableOrUnknown(
+          data['pending_sync']!,
+          _pendingSyncMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ever_synced')) {
+      context.handle(
+        _everSyncedMeta,
+        everSynced.isAcceptableOrUnknown(data['ever_synced']!, _everSyncedMeta),
+      );
+    }
     return context;
   }
 
@@ -2997,6 +3199,14 @@ class $SavingsGoalsTable extends SavingsGoals
         DriftSqlType.bool,
         data['${effectivePrefix}deleted'],
       )!,
+      pendingSync: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pending_sync'],
+      )!,
+      everSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ever_synced'],
+      )!,
     );
   }
 
@@ -3018,6 +3228,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
   final String icon;
   final int hue;
   final bool deleted;
+  final bool pendingSync;
+  final bool everSynced;
   const SavingsGoal({
     required this.id,
     required this.scope,
@@ -3030,6 +3242,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
     required this.icon,
     required this.hue,
     required this.deleted,
+    required this.pendingSync,
+    required this.everSynced,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3049,6 +3263,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
     map['icon'] = Variable<String>(icon);
     map['hue'] = Variable<int>(hue);
     map['deleted'] = Variable<bool>(deleted);
+    map['pending_sync'] = Variable<bool>(pendingSync);
+    map['ever_synced'] = Variable<bool>(everSynced);
     return map;
   }
 
@@ -3069,6 +3285,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
       icon: Value(icon),
       hue: Value(hue),
       deleted: Value(deleted),
+      pendingSync: Value(pendingSync),
+      everSynced: Value(everSynced),
     );
   }
 
@@ -3089,6 +3307,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
       icon: serializer.fromJson<String>(json['icon']),
       hue: serializer.fromJson<int>(json['hue']),
       deleted: serializer.fromJson<bool>(json['deleted']),
+      pendingSync: serializer.fromJson<bool>(json['pendingSync']),
+      everSynced: serializer.fromJson<bool>(json['everSynced']),
     );
   }
   @override
@@ -3106,6 +3326,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
       'icon': serializer.toJson<String>(icon),
       'hue': serializer.toJson<int>(hue),
       'deleted': serializer.toJson<bool>(deleted),
+      'pendingSync': serializer.toJson<bool>(pendingSync),
+      'everSynced': serializer.toJson<bool>(everSynced),
     };
   }
 
@@ -3121,6 +3343,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
     String? icon,
     int? hue,
     bool? deleted,
+    bool? pendingSync,
+    bool? everSynced,
   }) => SavingsGoal(
     id: id ?? this.id,
     scope: scope ?? this.scope,
@@ -3133,6 +3357,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
     icon: icon ?? this.icon,
     hue: hue ?? this.hue,
     deleted: deleted ?? this.deleted,
+    pendingSync: pendingSync ?? this.pendingSync,
+    everSynced: everSynced ?? this.everSynced,
   );
   SavingsGoal copyWithCompanion(SavingsGoalsCompanion data) {
     return SavingsGoal(
@@ -3155,6 +3381,12 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
       icon: data.icon.present ? data.icon.value : this.icon,
       hue: data.hue.present ? data.hue.value : this.hue,
       deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      pendingSync: data.pendingSync.present
+          ? data.pendingSync.value
+          : this.pendingSync,
+      everSynced: data.everSynced.present
+          ? data.everSynced.value
+          : this.everSynced,
     );
   }
 
@@ -3171,7 +3403,9 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
           ..write('walletId: $walletId, ')
           ..write('icon: $icon, ')
           ..write('hue: $hue, ')
-          ..write('deleted: $deleted')
+          ..write('deleted: $deleted, ')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -3189,6 +3423,8 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
     icon,
     hue,
     deleted,
+    pendingSync,
+    everSynced,
   );
   @override
   bool operator ==(Object other) =>
@@ -3204,7 +3440,9 @@ class SavingsGoal extends DataClass implements Insertable<SavingsGoal> {
           other.walletId == this.walletId &&
           other.icon == this.icon &&
           other.hue == this.hue &&
-          other.deleted == this.deleted);
+          other.deleted == this.deleted &&
+          other.pendingSync == this.pendingSync &&
+          other.everSynced == this.everSynced);
 }
 
 class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
@@ -3219,6 +3457,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
   final Value<String> icon;
   final Value<int> hue;
   final Value<bool> deleted;
+  final Value<bool> pendingSync;
+  final Value<bool> everSynced;
   const SavingsGoalsCompanion({
     this.id = const Value.absent(),
     this.scope = const Value.absent(),
@@ -3231,6 +3471,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
     this.icon = const Value.absent(),
     this.hue = const Value.absent(),
     this.deleted = const Value.absent(),
+    this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   });
   SavingsGoalsCompanion.insert({
     this.id = const Value.absent(),
@@ -3244,6 +3486,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
     required String icon,
     required int hue,
     this.deleted = const Value.absent(),
+    this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   }) : scope = Value(scope),
        name = Value(name),
        targetAmount = Value(targetAmount),
@@ -3263,6 +3507,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
     Expression<String>? icon,
     Expression<int>? hue,
     Expression<bool>? deleted,
+    Expression<bool>? pendingSync,
+    Expression<bool>? everSynced,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3276,6 +3522,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
       if (icon != null) 'icon': icon,
       if (hue != null) 'hue': hue,
       if (deleted != null) 'deleted': deleted,
+      if (pendingSync != null) 'pending_sync': pendingSync,
+      if (everSynced != null) 'ever_synced': everSynced,
     });
   }
 
@@ -3291,6 +3539,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
     Value<String>? icon,
     Value<int>? hue,
     Value<bool>? deleted,
+    Value<bool>? pendingSync,
+    Value<bool>? everSynced,
   }) {
     return SavingsGoalsCompanion(
       id: id ?? this.id,
@@ -3304,6 +3554,8 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
       icon: icon ?? this.icon,
       hue: hue ?? this.hue,
       deleted: deleted ?? this.deleted,
+      pendingSync: pendingSync ?? this.pendingSync,
+      everSynced: everSynced ?? this.everSynced,
     );
   }
 
@@ -3343,6 +3595,12 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
     if (deleted.present) {
       map['deleted'] = Variable<bool>(deleted.value);
     }
+    if (pendingSync.present) {
+      map['pending_sync'] = Variable<bool>(pendingSync.value);
+    }
+    if (everSynced.present) {
+      map['ever_synced'] = Variable<bool>(everSynced.value);
+    }
     return map;
   }
 
@@ -3359,7 +3617,9 @@ class SavingsGoalsCompanion extends UpdateCompanion<SavingsGoal> {
           ..write('walletId: $walletId, ')
           ..write('icon: $icon, ')
           ..write('hue: $hue, ')
-          ..write('deleted: $deleted')
+          ..write('deleted: $deleted, ')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -3507,6 +3767,21 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _everSyncedMeta = const VerificationMeta(
+    'everSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> everSynced = GeneratedColumn<bool>(
+    'ever_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ever_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3522,6 +3797,7 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
     walletId,
     deleted,
     pendingSync,
+    everSynced,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3628,6 +3904,12 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
         ),
       );
     }
+    if (data.containsKey('ever_synced')) {
+      context.handle(
+        _everSyncedMeta,
+        everSynced.isAcceptableOrUnknown(data['ever_synced']!, _everSyncedMeta),
+      );
+    }
     return context;
   }
 
@@ -3689,6 +3971,10 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
         DriftSqlType.bool,
         data['${effectivePrefix}pending_sync'],
       )!,
+      everSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ever_synced'],
+      )!,
     );
   }
 
@@ -3712,6 +3998,7 @@ class Debt extends DataClass implements Insertable<Debt> {
   final int? walletId;
   final bool deleted;
   final bool pendingSync;
+  final bool everSynced;
   const Debt({
     required this.id,
     this.ownerUserId,
@@ -3726,6 +4013,7 @@ class Debt extends DataClass implements Insertable<Debt> {
     this.walletId,
     required this.deleted,
     required this.pendingSync,
+    required this.everSynced,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3751,6 +4039,7 @@ class Debt extends DataClass implements Insertable<Debt> {
     }
     map['deleted'] = Variable<bool>(deleted);
     map['pending_sync'] = Variable<bool>(pendingSync);
+    map['ever_synced'] = Variable<bool>(everSynced);
     return map;
   }
 
@@ -3775,6 +4064,7 @@ class Debt extends DataClass implements Insertable<Debt> {
           : Value(walletId),
       deleted: Value(deleted),
       pendingSync: Value(pendingSync),
+      everSynced: Value(everSynced),
     );
   }
 
@@ -3797,6 +4087,7 @@ class Debt extends DataClass implements Insertable<Debt> {
       walletId: serializer.fromJson<int?>(json['walletId']),
       deleted: serializer.fromJson<bool>(json['deleted']),
       pendingSync: serializer.fromJson<bool>(json['pendingSync']),
+      everSynced: serializer.fromJson<bool>(json['everSynced']),
     );
   }
   @override
@@ -3816,6 +4107,7 @@ class Debt extends DataClass implements Insertable<Debt> {
       'walletId': serializer.toJson<int?>(walletId),
       'deleted': serializer.toJson<bool>(deleted),
       'pendingSync': serializer.toJson<bool>(pendingSync),
+      'everSynced': serializer.toJson<bool>(everSynced),
     };
   }
 
@@ -3833,6 +4125,7 @@ class Debt extends DataClass implements Insertable<Debt> {
     Value<int?> walletId = const Value.absent(),
     bool? deleted,
     bool? pendingSync,
+    bool? everSynced,
   }) => Debt(
     id: id ?? this.id,
     ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
@@ -3847,6 +4140,7 @@ class Debt extends DataClass implements Insertable<Debt> {
     walletId: walletId.present ? walletId.value : this.walletId,
     deleted: deleted ?? this.deleted,
     pendingSync: pendingSync ?? this.pendingSync,
+    everSynced: everSynced ?? this.everSynced,
   );
   Debt copyWithCompanion(DebtsCompanion data) {
     return Debt(
@@ -3867,6 +4161,9 @@ class Debt extends DataClass implements Insertable<Debt> {
       pendingSync: data.pendingSync.present
           ? data.pendingSync.value
           : this.pendingSync,
+      everSynced: data.everSynced.present
+          ? data.everSynced.value
+          : this.everSynced,
     );
   }
 
@@ -3885,7 +4182,8 @@ class Debt extends DataClass implements Insertable<Debt> {
           ..write('note: $note, ')
           ..write('walletId: $walletId, ')
           ..write('deleted: $deleted, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -3905,6 +4203,7 @@ class Debt extends DataClass implements Insertable<Debt> {
     walletId,
     deleted,
     pendingSync,
+    everSynced,
   );
   @override
   bool operator ==(Object other) =>
@@ -3922,7 +4221,8 @@ class Debt extends DataClass implements Insertable<Debt> {
           other.note == this.note &&
           other.walletId == this.walletId &&
           other.deleted == this.deleted &&
-          other.pendingSync == this.pendingSync);
+          other.pendingSync == this.pendingSync &&
+          other.everSynced == this.everSynced);
 }
 
 class DebtsCompanion extends UpdateCompanion<Debt> {
@@ -3939,6 +4239,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
   final Value<int?> walletId;
   final Value<bool> deleted;
   final Value<bool> pendingSync;
+  final Value<bool> everSynced;
   const DebtsCompanion({
     this.id = const Value.absent(),
     this.ownerUserId = const Value.absent(),
@@ -3953,6 +4254,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     this.walletId = const Value.absent(),
     this.deleted = const Value.absent(),
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   });
   DebtsCompanion.insert({
     this.id = const Value.absent(),
@@ -3968,6 +4270,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     this.walletId = const Value.absent(),
     this.deleted = const Value.absent(),
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   }) : type = Value(type),
        partyName = Value(partyName),
        amount = Value(amount),
@@ -3988,6 +4291,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     Expression<int>? walletId,
     Expression<bool>? deleted,
     Expression<bool>? pendingSync,
+    Expression<bool>? everSynced,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4003,6 +4307,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
       if (walletId != null) 'wallet_id': walletId,
       if (deleted != null) 'deleted': deleted,
       if (pendingSync != null) 'pending_sync': pendingSync,
+      if (everSynced != null) 'ever_synced': everSynced,
     });
   }
 
@@ -4020,6 +4325,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     Value<int?>? walletId,
     Value<bool>? deleted,
     Value<bool>? pendingSync,
+    Value<bool>? everSynced,
   }) {
     return DebtsCompanion(
       id: id ?? this.id,
@@ -4035,6 +4341,7 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
       walletId: walletId ?? this.walletId,
       deleted: deleted ?? this.deleted,
       pendingSync: pendingSync ?? this.pendingSync,
+      everSynced: everSynced ?? this.everSynced,
     );
   }
 
@@ -4080,6 +4387,9 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     if (pendingSync.present) {
       map['pending_sync'] = Variable<bool>(pendingSync.value);
     }
+    if (everSynced.present) {
+      map['ever_synced'] = Variable<bool>(everSynced.value);
+    }
     return map;
   }
 
@@ -4098,7 +4408,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
           ..write('note: $note, ')
           ..write('walletId: $walletId, ')
           ..write('deleted: $deleted, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -4239,6 +4550,21 @@ class $RecurringsTable extends Recurrings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _everSyncedMeta = const VerificationMeta(
+    'everSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> everSynced = GeneratedColumn<bool>(
+    'ever_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ever_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4253,6 +4579,7 @@ class $RecurringsTable extends Recurrings
     note,
     createdBy,
     pendingSync,
+    everSynced,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4357,6 +4684,12 @@ class $RecurringsTable extends Recurrings
         ),
       );
     }
+    if (data.containsKey('ever_synced')) {
+      context.handle(
+        _everSyncedMeta,
+        everSynced.isAcceptableOrUnknown(data['ever_synced']!, _everSyncedMeta),
+      );
+    }
     return context;
   }
 
@@ -4414,6 +4747,10 @@ class $RecurringsTable extends Recurrings
         DriftSqlType.bool,
         data['${effectivePrefix}pending_sync'],
       )!,
+      everSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ever_synced'],
+      )!,
     );
   }
 
@@ -4436,6 +4773,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
   final String? note;
   final int createdBy;
   final bool pendingSync;
+  final bool everSynced;
   const Recurring({
     required this.id,
     required this.type,
@@ -4449,6 +4787,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
     this.note,
     required this.createdBy,
     required this.pendingSync,
+    required this.everSynced,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4469,6 +4808,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
     }
     map['created_by'] = Variable<int>(createdBy);
     map['pending_sync'] = Variable<bool>(pendingSync);
+    map['ever_synced'] = Variable<bool>(everSynced);
     return map;
   }
 
@@ -4488,6 +4828,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdBy: Value(createdBy),
       pendingSync: Value(pendingSync),
+      everSynced: Value(everSynced),
     );
   }
 
@@ -4509,6 +4850,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
       note: serializer.fromJson<String?>(json['note']),
       createdBy: serializer.fromJson<int>(json['createdBy']),
       pendingSync: serializer.fromJson<bool>(json['pendingSync']),
+      everSynced: serializer.fromJson<bool>(json['everSynced']),
     );
   }
   @override
@@ -4527,6 +4869,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
       'note': serializer.toJson<String?>(note),
       'createdBy': serializer.toJson<int>(createdBy),
       'pendingSync': serializer.toJson<bool>(pendingSync),
+      'everSynced': serializer.toJson<bool>(everSynced),
     };
   }
 
@@ -4543,6 +4886,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
     Value<String?> note = const Value.absent(),
     int? createdBy,
     bool? pendingSync,
+    bool? everSynced,
   }) => Recurring(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -4556,6 +4900,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
     note: note.present ? note.value : this.note,
     createdBy: createdBy ?? this.createdBy,
     pendingSync: pendingSync ?? this.pendingSync,
+    everSynced: everSynced ?? this.everSynced,
   );
   Recurring copyWithCompanion(RecurringsCompanion data) {
     return Recurring(
@@ -4579,6 +4924,9 @@ class Recurring extends DataClass implements Insertable<Recurring> {
       pendingSync: data.pendingSync.present
           ? data.pendingSync.value
           : this.pendingSync,
+      everSynced: data.everSynced.present
+          ? data.everSynced.value
+          : this.everSynced,
     );
   }
 
@@ -4596,7 +4944,8 @@ class Recurring extends DataClass implements Insertable<Recurring> {
           ..write('autoCreate: $autoCreate, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -4615,6 +4964,7 @@ class Recurring extends DataClass implements Insertable<Recurring> {
     note,
     createdBy,
     pendingSync,
+    everSynced,
   );
   @override
   bool operator ==(Object other) =>
@@ -4631,7 +4981,8 @@ class Recurring extends DataClass implements Insertable<Recurring> {
           other.autoCreate == this.autoCreate &&
           other.note == this.note &&
           other.createdBy == this.createdBy &&
-          other.pendingSync == this.pendingSync);
+          other.pendingSync == this.pendingSync &&
+          other.everSynced == this.everSynced);
 }
 
 class RecurringsCompanion extends UpdateCompanion<Recurring> {
@@ -4647,6 +4998,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
   final Value<String?> note;
   final Value<int> createdBy;
   final Value<bool> pendingSync;
+  final Value<bool> everSynced;
   const RecurringsCompanion({
     this.id = const Value.absent(),
     this.type = const Value.absent(),
@@ -4660,6 +5012,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
     this.note = const Value.absent(),
     this.createdBy = const Value.absent(),
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   });
   RecurringsCompanion.insert({
     this.id = const Value.absent(),
@@ -4674,6 +5027,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
     this.note = const Value.absent(),
     required int createdBy,
     this.pendingSync = const Value.absent(),
+    this.everSynced = const Value.absent(),
   }) : type = Value(type),
        walletId = Value(walletId),
        categoryId = Value(categoryId),
@@ -4695,6 +5049,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
     Expression<String>? note,
     Expression<int>? createdBy,
     Expression<bool>? pendingSync,
+    Expression<bool>? everSynced,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4709,6 +5064,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
       if (note != null) 'note': note,
       if (createdBy != null) 'created_by': createdBy,
       if (pendingSync != null) 'pending_sync': pendingSync,
+      if (everSynced != null) 'ever_synced': everSynced,
     });
   }
 
@@ -4725,6 +5081,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
     Value<String?>? note,
     Value<int>? createdBy,
     Value<bool>? pendingSync,
+    Value<bool>? everSynced,
   }) {
     return RecurringsCompanion(
       id: id ?? this.id,
@@ -4739,6 +5096,7 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
       note: note ?? this.note,
       createdBy: createdBy ?? this.createdBy,
       pendingSync: pendingSync ?? this.pendingSync,
+      everSynced: everSynced ?? this.everSynced,
     );
   }
 
@@ -4781,6 +5139,9 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
     if (pendingSync.present) {
       map['pending_sync'] = Variable<bool>(pendingSync.value);
     }
+    if (everSynced.present) {
+      map['ever_synced'] = Variable<bool>(everSynced.value);
+    }
     return map;
   }
 
@@ -4798,7 +5159,8 @@ class RecurringsCompanion extends UpdateCompanion<Recurring> {
           ..write('autoCreate: $autoCreate, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
-          ..write('pendingSync: $pendingSync')
+          ..write('pendingSync: $pendingSync, ')
+          ..write('everSynced: $everSynced')
           ..write(')'))
         .toString();
   }
@@ -6089,6 +6451,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       required String icon,
       required int hue,
       Value<int?> parentId,
+      Value<bool> deleted,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
     CategoriesCompanion Function({
@@ -6098,6 +6461,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> icon,
       Value<int> hue,
       Value<int?> parentId,
+      Value<bool> deleted,
     });
 
 class $$CategoriesTableFilterComposer
@@ -6136,6 +6500,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<int> get parentId => $composableBuilder(
     column: $table.parentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6178,6 +6547,11 @@ class $$CategoriesTableOrderingComposer
     column: $table.parentId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -6206,6 +6580,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<int> get parentId =>
       $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
 }
 
 class $$CategoriesTableTableManager
@@ -6242,6 +6619,7 @@ class $$CategoriesTableTableManager
                 Value<String> icon = const Value.absent(),
                 Value<int> hue = const Value.absent(),
                 Value<int?> parentId = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
                 name: name,
@@ -6249,6 +6627,7 @@ class $$CategoriesTableTableManager
                 icon: icon,
                 hue: hue,
                 parentId: parentId,
+                deleted: deleted,
               ),
           createCompanionCallback:
               ({
@@ -6258,6 +6637,7 @@ class $$CategoriesTableTableManager
                 required String icon,
                 required int hue,
                 Value<int?> parentId = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
                 name: name,
@@ -6265,6 +6645,7 @@ class $$CategoriesTableTableManager
                 icon: icon,
                 hue: hue,
                 parentId: parentId,
+                deleted: deleted,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -6697,6 +7078,8 @@ typedef $$BudgetsTableCreateCompanionBuilder =
       required int amount,
       required String periodMonth,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
+      Value<bool> deleted,
     });
 typedef $$BudgetsTableUpdateCompanionBuilder =
     BudgetsCompanion Function({
@@ -6707,6 +7090,8 @@ typedef $$BudgetsTableUpdateCompanionBuilder =
       Value<int> amount,
       Value<String> periodMonth,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
+      Value<bool> deleted,
     });
 
 class $$BudgetsTableFilterComposer
@@ -6750,6 +7135,16 @@ class $$BudgetsTableFilterComposer
 
   ColumnFilters<bool> get pendingSync => $composableBuilder(
     column: $table.pendingSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6797,6 +7192,16 @@ class $$BudgetsTableOrderingComposer
     column: $table.pendingSync,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$BudgetsTableAnnotationComposer
@@ -6836,6 +7241,14 @@ class $$BudgetsTableAnnotationComposer
     column: $table.pendingSync,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
 }
 
 class $$BudgetsTableTableManager
@@ -6873,6 +7286,8 @@ class $$BudgetsTableTableManager
                 Value<int> amount = const Value.absent(),
                 Value<String> periodMonth = const Value.absent(),
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
               }) => BudgetsCompanion(
                 id: id,
                 scope: scope,
@@ -6881,6 +7296,8 @@ class $$BudgetsTableTableManager
                 amount: amount,
                 periodMonth: periodMonth,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
+                deleted: deleted,
               ),
           createCompanionCallback:
               ({
@@ -6891,6 +7308,8 @@ class $$BudgetsTableTableManager
                 required int amount,
                 required String periodMonth,
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
               }) => BudgetsCompanion.insert(
                 id: id,
                 scope: scope,
@@ -6899,6 +7318,8 @@ class $$BudgetsTableTableManager
                 amount: amount,
                 periodMonth: periodMonth,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
+                deleted: deleted,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -6935,6 +7356,8 @@ typedef $$SavingsGoalsTableCreateCompanionBuilder =
       required String icon,
       required int hue,
       Value<bool> deleted,
+      Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 typedef $$SavingsGoalsTableUpdateCompanionBuilder =
     SavingsGoalsCompanion Function({
@@ -6949,6 +7372,8 @@ typedef $$SavingsGoalsTableUpdateCompanionBuilder =
       Value<String> icon,
       Value<int> hue,
       Value<bool> deleted,
+      Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 
 class $$SavingsGoalsTableFilterComposer
@@ -7012,6 +7437,16 @@ class $$SavingsGoalsTableFilterComposer
 
   ColumnFilters<bool> get deleted => $composableBuilder(
     column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7079,6 +7514,16 @@ class $$SavingsGoalsTableOrderingComposer
     column: $table.deleted,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SavingsGoalsTableAnnotationComposer
@@ -7130,6 +7575,16 @@ class $$SavingsGoalsTableAnnotationComposer
 
   GeneratedColumn<bool> get deleted =>
       $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<bool> get pendingSync => $composableBuilder(
+    column: $table.pendingSync,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => column,
+  );
 }
 
 class $$SavingsGoalsTableTableManager
@@ -7174,6 +7629,8 @@ class $$SavingsGoalsTableTableManager
                 Value<String> icon = const Value.absent(),
                 Value<int> hue = const Value.absent(),
                 Value<bool> deleted = const Value.absent(),
+                Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => SavingsGoalsCompanion(
                 id: id,
                 scope: scope,
@@ -7186,6 +7643,8 @@ class $$SavingsGoalsTableTableManager
                 icon: icon,
                 hue: hue,
                 deleted: deleted,
+                pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           createCompanionCallback:
               ({
@@ -7200,6 +7659,8 @@ class $$SavingsGoalsTableTableManager
                 required String icon,
                 required int hue,
                 Value<bool> deleted = const Value.absent(),
+                Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => SavingsGoalsCompanion.insert(
                 id: id,
                 scope: scope,
@@ -7212,6 +7673,8 @@ class $$SavingsGoalsTableTableManager
                 icon: icon,
                 hue: hue,
                 deleted: deleted,
+                pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7253,6 +7716,7 @@ typedef $$DebtsTableCreateCompanionBuilder =
       Value<int?> walletId,
       Value<bool> deleted,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 typedef $$DebtsTableUpdateCompanionBuilder =
     DebtsCompanion Function({
@@ -7269,6 +7733,7 @@ typedef $$DebtsTableUpdateCompanionBuilder =
       Value<int?> walletId,
       Value<bool> deleted,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 
 class $$DebtsTableFilterComposer extends Composer<_$AppDatabase, $DebtsTable> {
@@ -7341,6 +7806,11 @@ class $$DebtsTableFilterComposer extends Composer<_$AppDatabase, $DebtsTable> {
 
   ColumnFilters<bool> get pendingSync => $composableBuilder(
     column: $table.pendingSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7418,6 +7888,11 @@ class $$DebtsTableOrderingComposer
     column: $table.pendingSync,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DebtsTableAnnotationComposer
@@ -7471,6 +7946,11 @@ class $$DebtsTableAnnotationComposer
     column: $table.pendingSync,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => column,
+  );
 }
 
 class $$DebtsTableTableManager
@@ -7514,6 +7994,7 @@ class $$DebtsTableTableManager
                 Value<int?> walletId = const Value.absent(),
                 Value<bool> deleted = const Value.absent(),
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => DebtsCompanion(
                 id: id,
                 ownerUserId: ownerUserId,
@@ -7528,6 +8009,7 @@ class $$DebtsTableTableManager
                 walletId: walletId,
                 deleted: deleted,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           createCompanionCallback:
               ({
@@ -7544,6 +8026,7 @@ class $$DebtsTableTableManager
                 Value<int?> walletId = const Value.absent(),
                 Value<bool> deleted = const Value.absent(),
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => DebtsCompanion.insert(
                 id: id,
                 ownerUserId: ownerUserId,
@@ -7558,6 +8041,7 @@ class $$DebtsTableTableManager
                 walletId: walletId,
                 deleted: deleted,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7595,6 +8079,7 @@ typedef $$RecurringsTableCreateCompanionBuilder =
       Value<String?> note,
       required int createdBy,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 typedef $$RecurringsTableUpdateCompanionBuilder =
     RecurringsCompanion Function({
@@ -7610,6 +8095,7 @@ typedef $$RecurringsTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<int> createdBy,
       Value<bool> pendingSync,
+      Value<bool> everSynced,
     });
 
 class $$RecurringsTableFilterComposer
@@ -7678,6 +8164,11 @@ class $$RecurringsTableFilterComposer
 
   ColumnFilters<bool> get pendingSync => $composableBuilder(
     column: $table.pendingSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7750,6 +8241,11 @@ class $$RecurringsTableOrderingComposer
     column: $table.pendingSync,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RecurringsTableAnnotationComposer
@@ -7804,6 +8300,11 @@ class $$RecurringsTableAnnotationComposer
     column: $table.pendingSync,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get everSynced => $composableBuilder(
+    column: $table.everSynced,
+    builder: (column) => column,
+  );
 }
 
 class $$RecurringsTableTableManager
@@ -7849,6 +8350,7 @@ class $$RecurringsTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<int> createdBy = const Value.absent(),
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => RecurringsCompanion(
                 id: id,
                 type: type,
@@ -7862,6 +8364,7 @@ class $$RecurringsTableTableManager
                 note: note,
                 createdBy: createdBy,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           createCompanionCallback:
               ({
@@ -7877,6 +8380,7 @@ class $$RecurringsTableTableManager
                 Value<String?> note = const Value.absent(),
                 required int createdBy,
                 Value<bool> pendingSync = const Value.absent(),
+                Value<bool> everSynced = const Value.absent(),
               }) => RecurringsCompanion.insert(
                 id: id,
                 type: type,
@@ -7890,6 +8394,7 @@ class $$RecurringsTableTableManager
                 note: note,
                 createdBy: createdBy,
                 pendingSync: pendingSync,
+                everSynced: everSynced,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
