@@ -68,7 +68,7 @@ class BudgetScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, String monthKey) {
     AppSheet.show(
       context: context,
-      child: _AddBudgetSheet(monthKey: monthKey, ref: ref),
+      child: _AddBudgetSheet(monthKey: monthKey),
     );
   }
 }
@@ -167,7 +167,14 @@ class _BudgetBodyState extends State<_BudgetBody> {
     final catMap = {for (final c in widget.categories) c.id: c};
     final totalBudget = widget.budgets.fold(0, (s, b) => s + b.amount);
     final spentMap = {for (final t in _catTotals) t.categoryId: t.total};
-    final totalSpent = _catTotals.fold(0, (s, t) => s + t.total);
+    // Only count spending within categories that actually have a budget set
+    // — summing ALL expense categories (including ones never budgeted, e.g.
+    // Cicilan/Operasional Rumah with no budget entry) against a total that
+    // only covers one budgeted category produced nonsensical numbers like
+    // "524% terpakai" when total household spending vastly exceeds the one
+    // category actually being tracked.
+    final totalSpent = widget.budgets
+        .fold(0, (s, b) => s + (spentMap[b.categoryId] ?? 0));
     final sisa = totalBudget - totalSpent;
     final overallFraction =
         totalBudget > 0 ? totalSpent / totalBudget : 0.0;
@@ -397,16 +404,15 @@ class _BudgetBodyState extends State<_BudgetBody> {
 // Add Budget Sheet
 // ---------------------------------------------------------------------------
 
-class _AddBudgetSheet extends StatefulWidget {
-  const _AddBudgetSheet({required this.monthKey, required this.ref});
+class _AddBudgetSheet extends ConsumerStatefulWidget {
+  const _AddBudgetSheet({required this.monthKey});
   final String monthKey;
-  final WidgetRef ref;
 
   @override
-  State<_AddBudgetSheet> createState() => _AddBudgetSheetState();
+  ConsumerState<_AddBudgetSheet> createState() => _AddBudgetSheetState();
 }
 
-class _AddBudgetSheetState extends State<_AddBudgetSheet> {
+class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
   int _amount = 0;
   Category? _selectedCat;
 
@@ -414,7 +420,7 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
 
   Future<void> _save() async {
     if (!_canSave) return;
-    final repo = widget.ref.read(budgetRepoProvider);
+    final repo = ref.read(budgetRepoProvider);
     // Generate a pseudo-id from category + month for upsert
     final id = int.parse(
       '${_selectedCat!.id}${widget.monthKey.replaceAll('-', '')}',
@@ -436,7 +442,7 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final expCatsAsync = widget.ref.watch(expenseCategoriesProvider);
+    final expCatsAsync = ref.watch(expenseCategoriesProvider);
 
     return SingleChildScrollView(
       padding: EdgeInsets.only(

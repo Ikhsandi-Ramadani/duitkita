@@ -58,9 +58,16 @@ final budgetSummaryProvider = FutureProvider<BudgetSummary>((ref) async {
   final totalBudget = budgets.fold(0, (sum, b) => sum + b.amount);
 
   final txRepo = ref.watch(transactionRepoProvider);
-  final totals = await txRepo.monthlyTotals(month);
+  // Only count spending within categories that actually have a budget set —
+  // totals.expense is TOTAL household spending across every category, which
+  // produced nonsensical percentages (e.g. 524%) when only one category out
+  // of many was ever budgeted.
+  final catTotals = await txRepo.monthlyExpenseByCategory(month);
+  final spentMap = {for (final t in catTotals) t.categoryId: t.total};
+  final spentInBudgetedCategories =
+      budgets.fold(0, (sum, b) => sum + (spentMap[b.categoryId] ?? 0));
 
-  return BudgetSummary(budgeted: totalBudget, spent: totals.expense);
+  return BudgetSummary(budgeted: totalBudget, spent: spentInBudgetedCategories);
 });
 
 // Goals total collected

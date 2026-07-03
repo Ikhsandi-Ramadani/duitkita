@@ -226,7 +226,8 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             Text('DuitKita', style: AppText.body(color: colors.text).copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text('Versi ${packageInfo.version} (${packageInfo.buildNumber})',
+            Text(
+                'Versi ${packageInfo.version} (${normalizedBuildNumber(packageInfo.buildNumber)})',
                 style: AppText.label(color: colors.text2)),
             const SizedBox(height: 8),
             Text(

@@ -16,6 +16,16 @@ String apiStorageBaseUrl() {
   return base;
 }
 
+/// `flutter build apk --split-per-abi` offsets the Android versionCode per
+/// ABI (armeabi-v7a=1000+N, arm64-v8a=2000+N, x86=3000+N, x86_64=4000+N) so
+/// Play-style multi-APK installs stay ordered. Strips that offset so the
+/// build number shown/compared matches what was actually entered at release
+/// time — otherwise an arm64 install shows e.g. "2009" instead of "9".
+int normalizedBuildNumber(String rawBuildNumber) {
+  final raw = int.tryParse(rawBuildNumber) ?? 1;
+  return raw >= 1000 ? raw % 1000 : raw;
+}
+
 final _rpFmt = NumberFormat('#,##0', 'id_ID');
 final _dayFmt = DateFormat('EEEE, d MMM yyyy', 'id_ID');
 final _relDayFmt = DateFormat('EEEE, d MMM', 'id_ID');
