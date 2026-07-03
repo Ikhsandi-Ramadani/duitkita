@@ -56,6 +56,17 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
+      - name: Configure release signing
+        working-directory: mobile/android
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/duitkita-release.jks
+          cat > key.properties <<PROPS
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=duitkita-release.jks
+          PROPS
+
       - name: Build Release APK
         working-directory: mobile
         run: |
