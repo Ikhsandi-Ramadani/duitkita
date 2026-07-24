@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
 use App\Models\Household;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -22,10 +22,10 @@ class ApiTest extends TestCase
     private function registerUser(array $overrides = []): array
     {
         $response = $this->postJson('/api/auth/register', array_merge([
-            'name'        => 'Test Owner',
+            'name' => 'Test Owner',
             'family_name' => 'Test Family',
-            'email'       => 'owner@example.com',
-            'password'    => 'password123',
+            'email' => 'owner@example.com',
+            'password' => 'password123',
         ], $overrides));
 
         $response->assertStatus(201);
@@ -35,9 +35,9 @@ class ApiTest extends TestCase
 
     private function makeUserWithHousehold(): array
     {
-        $data  = $this->registerUser();
+        $data = $this->registerUser();
         $token = $data['token'];
-        $user  = User::find($data['user']['id']);
+        $user = User::find($data['user']['id']);
 
         return [$user, $token];
     }
@@ -45,9 +45,9 @@ class ApiTest extends TestCase
     private function makeWallet(User $user, string $token, array $overrides = []): array
     {
         $response = $this->withToken($token)->postJson('/api/wallets', array_merge([
-            'scope'           => 'personal',
-            'name'            => 'Cash',
-            'type'            => 'cash',
+            'scope' => 'personal',
+            'name' => 'Cash',
+            'type' => 'cash',
             'initial_balance' => 100000,
         ], $overrides));
 
@@ -62,7 +62,7 @@ class ApiTest extends TestCase
             'name' => 'Food',
             'type' => 'expense',
             'icon' => 'food',
-            'hue'  => 120,
+            'hue' => 120,
         ], $overrides));
 
         $response->assertStatus(201);
@@ -77,16 +77,16 @@ class ApiTest extends TestCase
     public function test_register_creates_household_and_returns_token(): void
     {
         $response = $this->postJson('/api/auth/register', [
-            'name'        => 'Ikhsan',
+            'name' => 'Ikhsan',
             'family_name' => 'Ramadani Family',
-            'email'       => 'ikhsan@test.com',
-            'password'    => 'secret123',
+            'email' => 'ikhsan@test.com',
+            'password' => 'secret123',
         ]);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
                 'token',
-                'user'      => ['id', 'name', 'email', 'role', 'household_id'],
+                'user' => ['id', 'name', 'email', 'role', 'household_id'],
                 'household' => ['id', 'name', 'invite_code'],
             ]);
 
@@ -98,31 +98,31 @@ class ApiTest extends TestCase
     public function test_register_fails_duplicate_email(): void
     {
         $this->postJson('/api/auth/register', [
-            'name'        => 'Ikhsan',
+            'name' => 'Ikhsan',
             'family_name' => 'Family',
-            'email'       => 'dup@test.com',
-            'password'    => 'password123',
+            'email' => 'dup@test.com',
+            'password' => 'password123',
         ])->assertStatus(201);
 
         $this->postJson('/api/auth/register', [
-            'name'        => 'Other',
+            'name' => 'Other',
             'family_name' => 'Family2',
-            'email'       => 'dup@test.com',
-            'password'    => 'password123',
+            'email' => 'dup@test.com',
+            'password' => 'password123',
         ])->assertStatus(422);
     }
 
     public function test_join_household_with_invite_code(): void
     {
         // Create household via register
-        $ownerData   = $this->registerUser(['email' => 'owner2@test.com']);
-        $inviteCode  = $ownerData['household']['invite_code'];
+        $ownerData = $this->registerUser(['email' => 'owner2@test.com']);
+        $inviteCode = $ownerData['household']['invite_code'];
 
         $response = $this->postJson('/api/auth/join', [
             'invite_code' => $inviteCode,
-            'name'        => 'Member',
-            'email'       => 'member@test.com',
-            'password'    => 'password123',
+            'name' => 'Member',
+            'email' => 'member@test.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(201)
@@ -136,9 +136,9 @@ class ApiTest extends TestCase
     {
         $this->postJson('/api/auth/join', [
             'invite_code' => 'XXXXXX',
-            'name'        => 'Member',
-            'email'       => 'member2@test.com',
-            'password'    => 'password123',
+            'name' => 'Member',
+            'email' => 'member2@test.com',
+            'password' => 'password123',
         ])->assertStatus(404);
     }
 
@@ -147,7 +147,7 @@ class ApiTest extends TestCase
         $this->registerUser(['email' => 'login@test.com', 'password' => 'mypassword']);
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'login@test.com',
+            'identifier' => 'login@test.com',
             'password' => 'mypassword',
         ]);
 
@@ -160,9 +160,40 @@ class ApiTest extends TestCase
         $this->registerUser(['email' => 'badlogin@test.com', 'password' => 'correctpass']);
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'badlogin@test.com',
+            'identifier' => 'badlogin@test.com',
             'password' => 'wrongpass',
         ])->assertStatus(422);
+    }
+
+    public function test_pin_can_be_set_and_verified_without_revoking_token_on_mismatch(): void
+    {
+        [, $token] = $this->makeUserWithHousehold();
+
+        $this->withToken($token)
+            ->putJson('/api/me/pin', ['pin' => '123456'])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)
+            ->postJson('/api/me/pin/verify', ['pin' => '123456'])
+            ->assertOk()
+            ->assertJson(['verified' => true]);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)
+            ->postJson('/api/me/pin/verify', ['pin' => '654321'])
+            ->assertStatus(422);
+    }
+
+    public function test_forgot_password_does_not_expose_otp_in_production(): void
+    {
+        Mail::fake();
+        config()->set('app.debug', false);
+        $this->registerUser(['email' => 'forgot@test.com']);
+
+        $this->postJson('/api/auth/forgot-password', [
+            'identifier' => 'forgot@test.com',
+        ])->assertOk()->assertJsonMissingPath('otp');
     }
 
     // ---------------------------------------------------------------------------
@@ -172,19 +203,19 @@ class ApiTest extends TestCase
     public function test_transaction_store_income_increments_wallet_balance(): void
     {
         [$user, $token] = $this->makeUserWithHousehold();
-        $wallet         = $this->makeWallet($user, $token, ['initial_balance' => 0]);
-        $category       = $this->makeCategory($user, $token, ['type' => 'income']);
+        $wallet = $this->makeWallet($user, $token, ['initial_balance' => 0]);
+        $category = $this->makeCategory($user, $token, ['type' => 'income']);
 
         $this->withToken($token)->postJson('/api/transactions', [
-            'type'        => 'income',
-            'wallet_id'   => $wallet['id'],
+            'type' => 'income',
+            'wallet_id' => $wallet['id'],
             'category_id' => $category['id'],
-            'amount'      => 50000,
-            'date'        => now()->toISOString(),
+            'amount' => 50000,
+            'date' => now()->toISOString(),
         ])->assertStatus(201);
 
         $this->assertDatabaseHas('wallets', [
-            'id'              => $wallet['id'],
+            'id' => $wallet['id'],
             'current_balance' => 50000,
         ]);
     }
@@ -192,19 +223,19 @@ class ApiTest extends TestCase
     public function test_transaction_store_expense_decrements_wallet_balance(): void
     {
         [$user, $token] = $this->makeUserWithHousehold();
-        $wallet         = $this->makeWallet($user, $token, ['initial_balance' => 100000]);
-        $category       = $this->makeCategory($user, $token);
+        $wallet = $this->makeWallet($user, $token, ['initial_balance' => 100000]);
+        $category = $this->makeCategory($user, $token);
 
         $this->withToken($token)->postJson('/api/transactions', [
-            'type'        => 'expense',
-            'wallet_id'   => $wallet['id'],
+            'type' => 'expense',
+            'wallet_id' => $wallet['id'],
             'category_id' => $category['id'],
-            'amount'      => 30000,
-            'date'        => now()->toISOString(),
+            'amount' => 30000,
+            'date' => now()->toISOString(),
         ])->assertStatus(201);
 
         $this->assertDatabaseHas('wallets', [
-            'id'              => $wallet['id'],
+            'id' => $wallet['id'],
             'current_balance' => 70000,
         ]);
     }
@@ -216,25 +247,25 @@ class ApiTest extends TestCase
     public function test_transaction_update_by_non_recorder_returns_403(): void
     {
         [$owner, $ownerToken] = $this->makeUserWithHousehold();
-        $wallet               = $this->makeWallet($owner, $ownerToken, ['scope' => 'shared']);
-        $category             = $this->makeCategory($owner, $ownerToken);
+        $wallet = $this->makeWallet($owner, $ownerToken, ['scope' => 'shared']);
+        $category = $this->makeCategory($owner, $ownerToken);
 
         // Create transaction as owner
         $tx = $this->withToken($ownerToken)->postJson('/api/transactions', [
-            'type'        => 'expense',
-            'wallet_id'   => $wallet['id'],
+            'type' => 'expense',
+            'wallet_id' => $wallet['id'],
             'category_id' => $category['id'],
-            'amount'      => 10000,
-            'date'        => now()->toISOString(),
+            'amount' => 10000,
+            'date' => now()->toISOString(),
         ])->assertStatus(201)->json();
 
         // Member joins the same household
         $household = Household::find($owner->household_id);
         $this->postJson('/api/auth/join', [
             'invite_code' => $household->invite_code,
-            'name'        => 'Member',
-            'email'       => 'member403@test.com',
-            'password'    => 'password123',
+            'name' => 'Member',
+            'email' => 'member403@test.com',
+            'password' => 'password123',
         ])->assertStatus(201);
 
         $member = User::where('email', 'member403@test.com')->firstOrFail();
@@ -243,12 +274,12 @@ class ApiTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         // Member tries to edit owner's transaction
-        $this->actingAs($member, 'sanctum')->putJson('/api/transactions/' . $tx['id'], [
-            'type'        => 'expense',
-            'wallet_id'   => $wallet['id'],
+        $this->actingAs($member, 'sanctum')->putJson('/api/transactions/'.$tx['id'], [
+            'type' => 'expense',
+            'wallet_id' => $wallet['id'],
             'category_id' => $category['id'],
-            'amount'      => 5000,
-            'date'        => now()->toISOString(),
+            'amount' => 5000,
+            'date' => now()->toISOString(),
         ])->assertStatus(403);
     }
 
@@ -261,30 +292,30 @@ class ApiTest extends TestCase
         [$user, $token] = $this->makeUserWithHousehold();
 
         $source = $this->makeWallet($user, $token, [
-            'scope'           => 'personal',
-            'name'            => 'Source',
+            'scope' => 'personal',
+            'name' => 'Source',
             'initial_balance' => 200000,
         ]);
         $target = $this->makeWallet($user, $token, [
-            'scope'           => 'shared',
-            'name'            => 'Target',
+            'scope' => 'shared',
+            'name' => 'Target',
             'initial_balance' => 50000,
         ]);
 
         $this->withToken($token)->postJson('/api/transactions', [
-            'type'             => 'transfer',
-            'wallet_id'        => $source['id'],
+            'type' => 'transfer',
+            'wallet_id' => $source['id'],
             'target_wallet_id' => $target['id'],
-            'amount'           => 75000,
-            'date'             => now()->toISOString(),
+            'amount' => 75000,
+            'date' => now()->toISOString(),
         ])->assertStatus(201);
 
         $this->assertDatabaseHas('wallets', [
-            'id'              => $source['id'],
+            'id' => $source['id'],
             'current_balance' => 125000,
         ]);
         $this->assertDatabaseHas('wallets', [
-            'id'              => $target['id'],
+            'id' => $target['id'],
             'current_balance' => 125000,
         ]);
     }
@@ -296,19 +327,19 @@ class ApiTest extends TestCase
     public function test_sync_push_idempotent_by_client_id(): void
     {
         [$user, $token] = $this->makeUserWithHousehold();
-        $wallet         = $this->makeWallet($user, $token, ['initial_balance' => 0, 'scope' => 'shared']);
-        $category       = $this->makeCategory($user, $token, ['type' => 'income']);
+        $wallet = $this->makeWallet($user, $token, ['initial_balance' => 0, 'scope' => 'shared']);
+        $category = $this->makeCategory($user, $token, ['type' => 'income']);
 
         $clientId = (string) Str::uuid();
 
         $payload = [
             'transactions' => [[
-                'client_id'   => $clientId,
-                'type'        => 'income',
-                'wallet_id'   => $wallet['id'],
+                'client_id' => $clientId,
+                'type' => 'income',
+                'wallet_id' => $wallet['id'],
                 'category_id' => $category['id'],
-                'amount'      => 20000,
-                'date'        => now()->toISOString(),
+                'amount' => 20000,
+                'date' => now()->toISOString(),
             ]],
         ];
 
@@ -327,8 +358,43 @@ class ApiTest extends TestCase
 
         // Wallet balance should only be incremented once
         $this->assertDatabaseHas('wallets', [
-            'id'              => $wallet['id'],
+            'id' => $wallet['id'],
             'current_balance' => 20000,
+        ]);
+    }
+
+    public function test_sync_rejects_wallet_from_another_household(): void
+    {
+        [$firstUser, $firstToken] = $this->makeUserWithHousehold();
+        $foreignWallet = $this->makeWallet($firstUser, $firstToken, [
+            'scope' => 'shared',
+        ]);
+
+        $second = $this->registerUser([
+            'name' => 'Second Owner',
+            'family_name' => 'Second Family',
+            'email' => 'second-owner@test.com',
+        ]);
+
+        $payload = [
+            'transactions' => [[
+                'client_id' => (string) Str::uuid(),
+                'type' => 'income',
+                'wallet_id' => $foreignWallet['id'],
+                'amount' => 50000,
+                'date' => now()->toISOString(),
+            ]],
+        ];
+
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($second['token'])
+            ->postJson('/api/sync/transactions', $payload)
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('wallets', [
+            'id' => $foreignWallet['id'],
+            'current_balance' => 100000,
         ]);
     }
 }

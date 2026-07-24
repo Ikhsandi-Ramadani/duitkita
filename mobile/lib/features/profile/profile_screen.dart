@@ -40,13 +40,12 @@ class ProfileScreen extends ConsumerWidget {
     final userId = userIdAsync.value ?? 1;
     final members = ref.watch(membersProvider).value ?? [];
     final householdNameAsync = ref.watch(householdNameProvider);
-    final householdName =
-        householdNameAsync.value ?? 'Keluarga';
+    final householdName = householdNameAsync.value ?? 'Keluarga';
 
     final currentMember = members.cast<Member?>().firstWhere(
-          (m) => m?.id == userId,
-          orElse: () => members.isNotEmpty ? members.first : null,
-        );
+      (m) => m?.id == userId,
+      orElse: () => members.isNotEmpty ? members.first : null,
+    );
 
     final isOwner = currentMember?.role == 'owner';
 
@@ -57,8 +56,7 @@ class ProfileScreen extends ConsumerWidget {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Text(
                   'Profil',
                   style: AppText.screenTitle(color: colors.text),
@@ -72,8 +70,7 @@ class ProfileScreen extends ConsumerWidget {
                   // Profile card
                   if (currentMember != null)
                     EntranceAnimation(
-                      child: _ProfileCard(
-                          member: currentMember),
+                      child: _ProfileCard(member: currentMember),
                     ),
                   const SizedBox(height: 12),
                   // Family card
@@ -94,37 +91,38 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   EntranceAnimation(
                     delay: const Duration(milliseconds: 120),
-                    child: _SettingsCard(children: [
-                      _SettingsTile(
-                        icon: Icons.person_outline_rounded,
-                        label: 'Edit profil',
-                        onTap: () {
-                          if (currentMember != null) {
+                    child: _SettingsCard(
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.person_outline_rounded,
+                          label: 'Edit profil',
+                          onTap: () {
+                            if (currentMember != null) {
+                              AppSheet.show(
+                                context: context,
+                                child: _EditProfileSheet(member: currentMember),
+                              );
+                            }
+                          },
+                        ),
+                        _SettingsTile(
+                          icon: Icons.lock_clock_outlined,
+                          label: 'Ganti PIN',
+                          onTap: () {
                             AppSheet.show(
                               context: context,
-                              child:
-                                  _EditProfileSheet(member: currentMember),
+                              child: _ChangePinSheet(),
                             );
-                          }
-                        },
-                      ),
-                      _SettingsTile(
-                        icon: Icons.lock_clock_outlined,
-                        label: 'Ganti PIN',
-                        onTap: () {
-                          AppSheet.show(
-                            context: context,
-                            child: _ChangePinSheet(),
-                          );
-                        },
-                      ),
-                      _SettingsTile(
-                        icon: Icons.security_outlined,
-                        label: 'Keamanan & biometrik',
-                        trailing: _BiometricToggle(),
-                        onTap: null,
-                      ),
-                    ]),
+                          },
+                        ),
+                        _SettingsTile(
+                          icon: Icons.security_outlined,
+                          label: 'Keamanan & biometrik',
+                          trailing: _BiometricToggle(),
+                          onTap: null,
+                        ),
+                      ],
+                    ),
                   ),
                   // KELOLA KELUARGA — owner only
                   if (isOwner) ...[
@@ -139,28 +137,28 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     EntranceAnimation(
                       delay: const Duration(milliseconds: 180),
-                      child: _SettingsCard(children: [
-                        _SettingsTile(
-                          icon: Icons.group_outlined,
-                          label: 'Kelola anggota',
-                          onTap: () => AppSheet.show(
-                            context: context,
-                            child: _KelolaAnggotaSheet(
-                              currentUserId: userId,
+                      child: _SettingsCard(
+                        children: [
+                          _SettingsTile(
+                            icon: Icons.group_outlined,
+                            label: 'Kelola anggota',
+                            onTap: () => AppSheet.show(
+                              context: context,
+                              child: _KelolaAnggotaSheet(currentUserId: userId),
                             ),
                           ),
-                        ),
-                        _SettingsTile(
-                          icon: Icons.category_outlined,
-                          label: 'Kelola kategori',
-                          onTap: () => context.push('/categories'),
-                        ),
-                        _SettingsTile(
-                          icon: Icons.account_balance_wallet_outlined,
-                          label: 'Kelola dompet',
-                          onTap: () => context.push('/wallets'),
-                        ),
-                      ]),
+                          _SettingsTile(
+                            icon: Icons.category_outlined,
+                            label: 'Kelola kategori',
+                            onTap: () => context.push('/categories'),
+                          ),
+                          _SettingsTile(
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: 'Kelola dompet',
+                            onTap: () => context.push('/wallets'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                   const SizedBox(height: 20),
@@ -172,26 +170,28 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   EntranceAnimation(
                     delay: const Duration(milliseconds: 220),
-                    child: _SettingsCard(children: [
-                      _DarkModeToggle(),
-                      _SettingsTile(
-                        icon: Icons.notifications_outlined,
-                        label: 'Notifikasi',
-                        onTap: () => context.push('/notifications'),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.info_outline_rounded,
-                        label: 'Tentang DuitKita',
-                        onTap: () => _showAboutDialog(context),
-                      ),
-                      if (kDebugMode)
+                    child: _SettingsCard(
+                      children: [
+                        _DarkModeToggle(),
                         _SettingsTile(
-                          icon: Icons.http_outlined,
-                          label: 'HTTP Inspector (Alice)',
-                          onTap: () =>
-                              ref.read(aliceProvider)?.showInspector(),
+                          icon: Icons.notifications_outlined,
+                          label: 'Notifikasi',
+                          onTap: () => context.push('/notifications'),
                         ),
-                    ]),
+                        _SettingsTile(
+                          icon: Icons.info_outline_rounded,
+                          label: 'Tentang DuitKita',
+                          onTap: () => _showAboutDialog(context),
+                        ),
+                        if (kDebugMode)
+                          _SettingsTile(
+                            icon: Icons.http_outlined,
+                            label: 'HTTP Inspector (Alice)',
+                            onTap: () =>
+                                ref.read(aliceProvider)?.showInspector(),
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   // Logout button
@@ -217,18 +217,27 @@ class ProfileScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Tentang DuitKita',
-            style: AppText.cardTitle(color: colors.text)),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: Text(
+          'Tentang DuitKita',
+          style: AppText.cardTitle(color: colors.text),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('DuitKita', style: AppText.body(color: colors.text).copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'DuitKita',
+              style: AppText.body(
+                color: colors.text,
+              ).copyWith(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 4),
             Text(
-                'Versi ${packageInfo.version} (${normalizedBuildNumber(packageInfo.buildNumber)})',
-                style: AppText.label(color: colors.text2)),
+              'Versi ${packageInfo.version} (${normalizedBuildNumber(packageInfo.buildNumber)})',
+              style: AppText.label(color: colors.text2),
+            ),
             const SizedBox(height: 8),
             Text(
               'Aplikasi keuangan keluarga untuk mencatat dan mengelola pengeluaran bersama.',
@@ -239,9 +248,12 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text('Tutup',
-                style: AppText.body(color: colors.primary)
-                    .copyWith(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Tutup',
+              style: AppText.body(
+                color: colors.primary,
+              ).copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -352,16 +364,21 @@ class _FamilyCard extends StatelessWidget {
                     color: colors.primaryTint,
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(Icons.group_outlined,
-                      color: colors.primary, size: 20),
+                  child: Icon(
+                    Icons.group_outlined,
+                    color: colors.primary,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(householdName,
-                          style: AppText.cardTitle(color: colors.text)),
+                      Text(
+                        householdName,
+                        style: AppText.cardTitle(color: colors.text),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         '${members.length} anggota',
@@ -372,8 +389,11 @@ class _FamilyCard extends StatelessWidget {
                 ),
                 TextButton.icon(
                   onPressed: () => _showInviteSheet(context),
-                  icon: Icon(Icons.add_rounded,
-                      color: colors.primary, size: 16),
+                  icon: Icon(
+                    Icons.add_rounded,
+                    color: colors.primary,
+                    size: 16,
+                  ),
                   label: Text(
                     'Undang',
                     style: GoogleFonts.plusJakartaSans(
@@ -385,10 +405,12 @@ class _FamilyCard extends StatelessWidget {
                   style: TextButton.styleFrom(
                     backgroundColor: colors.primaryTint,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.sm)),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
                   ),
                 ),
               ],
@@ -405,13 +427,14 @@ class _FamilyCard extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 11),
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
                   child: Row(
                     children: [
                       MemberAvatar(
                         hue: m.avatarHue,
-                        initial:
-                            m.name.isNotEmpty ? m.name[0] : '?',
+                        initial: m.name.isNotEmpty ? m.name[0] : '?',
                         size: 34,
                         photoUrl: _avatarUrl(m.avatarPath),
                       ),
@@ -419,8 +442,9 @@ class _FamilyCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           isCurrentUser ? '${m.name} (kamu)' : m.name,
-                          style: AppText.body(color: colors.text)
-                              .copyWith(fontWeight: FontWeight.w600),
+                          style: AppText.body(
+                            color: colors.text,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                       Text(
@@ -428,19 +452,14 @@ class _FamilyCard extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color:
-                              isOwner ? colors.primary : colors.text3,
+                          color: isOwner ? colors.primary : colors.text3,
                         ),
                       ),
                     ],
                   ),
                 ),
                 if (idx < members.length - 1)
-                  Divider(
-                    height: 1,
-                    color: colors.border,
-                    indent: 62,
-                  ),
+                  Divider(height: 1, color: colors.border, indent: 62),
               ],
             );
           }),
@@ -450,10 +469,7 @@ class _FamilyCard extends StatelessWidget {
   }
 
   void _showInviteSheet(BuildContext context) {
-    AppSheet.show(
-      context: context,
-      child: const _InviteSheet(),
-    );
+    AppSheet.show(context: context, child: const _InviteSheet());
   }
 }
 
@@ -601,13 +617,19 @@ class _SettingsTile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label,
-                  style: AppText.body(color: colors.text)
-                      .copyWith(fontWeight: FontWeight.w600)),
+              child: Text(
+                label,
+                style: AppText.body(
+                  color: colors.text,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
             trailing ??
-                Icon(Icons.chevron_right_rounded,
-                    color: colors.text3, size: 18),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.text3,
+                  size: 18,
+                ),
           ],
         ),
       ),
@@ -624,7 +646,8 @@ class _DarkModeToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark ||
+    final isDark =
+        themeMode == ThemeMode.dark ||
         (themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
@@ -639,13 +662,20 @@ class _DarkModeToggle extends ConsumerWidget {
               color: colors.surface2,
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(Icons.dark_mode_outlined, color: colors.text2, size: 17),
+            child: Icon(
+              Icons.dark_mode_outlined,
+              color: colors.text2,
+              size: 17,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('Mode gelap',
-                style: AppText.body(color: colors.text)
-                    .copyWith(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Mode gelap',
+              style: AppText.body(
+                color: colors.text,
+              ).copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
           Switch(
             value: isDark,
@@ -679,8 +709,11 @@ class _BiometricToggle extends ConsumerWidget {
       final isSupported = await _localAuth.isDeviceSupported();
       if (!isSupported) {
         if (context.mounted) {
-          AppToast.show(context, 'HP ini tidak mendukung biometrik',
-              success: false);
+          AppToast.show(
+            context,
+            'HP ini tidak mendukung biometrik',
+            success: false,
+          );
         }
         return;
       }
@@ -689,8 +722,10 @@ class _BiometricToggle extends ConsumerWidget {
       if (!canCheck || available.isEmpty) {
         if (context.mounted) {
           AppToast.show(
-              context, 'Belum ada sidik jari/wajah terdaftar di HP',
-              success: false);
+            context,
+            'Belum ada sidik jari/wajah terdaftar di HP',
+            success: false,
+          );
         }
         return;
       }
@@ -704,8 +739,7 @@ class _BiometricToggle extends ConsumerWidget {
     } catch (e) {
       if (kDebugMode) print('[BiometricToggle] error: $e');
       if (context.mounted) {
-        AppToast.show(context, 'Gagal memverifikasi biometrik',
-            success: false);
+        AppToast.show(context, 'Gagal memverifikasi biometrik', success: false);
       }
     }
   }
@@ -739,9 +773,9 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
     final members = membersAsync.value ?? [];
 
     final currentMember = members.cast<Member?>().firstWhere(
-          (m) => m?.id == currentUserId,
-          orElse: () => null,
-        );
+      (m) => m?.id == currentUserId,
+      orElse: () => null,
+    );
     final isOwner = currentMember?.role == 'owner';
 
     return Padding(
@@ -751,8 +785,10 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Text('Kelola Anggota',
-                style: AppText.screenTitle(color: colors.text)),
+            child: Text(
+              'Kelola Anggota',
+              style: AppText.screenTitle(color: colors.text),
+            ),
           ),
           const SizedBox(height: 16),
           if (membersAsync.isLoading)
@@ -761,8 +797,10 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                child: Text('Belum ada anggota.',
-                    style: AppText.body(color: colors.text3)),
+                child: Text(
+                  'Belum ada anggota.',
+                  style: AppText.body(color: colors.text3),
+                ),
               ),
             )
           else
@@ -784,27 +822,27 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         child: Row(
                           children: [
                             MemberAvatar(
                               hue: m.avatarHue,
-                              initial:
-                                  m.name.isNotEmpty ? m.name[0] : '?',
+                              initial: m.name.isNotEmpty ? m.name[0] : '?',
                               size: 38,
                               photoUrl: _avatarUrl(m.avatarPath),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     isSelf ? '${m.name} (kamu)' : m.name,
-                                    style: AppText.body(color: colors.text)
-                                        .copyWith(
-                                            fontWeight: FontWeight.w600),
+                                    style: AppText.body(
+                                      color: colors.text,
+                                    ).copyWith(fontWeight: FontWeight.w600),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -821,7 +859,9 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: memberIsOwner
                                     ? colors.primaryTint
@@ -855,7 +895,9 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                                       );
                                     }
                                   } catch (e) {
-                                    if (kDebugMode) print('[Profile] removeMember error: $e');
+                                    if (kDebugMode) {
+                                      print('[Profile] removeMember error: $e');
+                                    }
                                     if (context.mounted) {
                                       AppToast.show(
                                         context,
@@ -871,11 +913,7 @@ class _KelolaAnggotaSheet extends ConsumerWidget {
                         ),
                       ),
                       if (idx < members.length - 1)
-                        Divider(
-                          height: 1,
-                          color: colors.border,
-                          indent: 64,
-                        ),
+                        Divider(height: 1, color: colors.border, indent: 64),
                     ],
                   );
                 }).toList(),
@@ -906,7 +944,8 @@ class _RemoveButtonState extends State<_RemoveButton> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
         title: Text(
           'Hapus Anggota',
           style: AppText.cardTitle(color: colors.text),
@@ -918,15 +957,21 @@ class _RemoveButtonState extends State<_RemoveButton> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('Batal',
-                style: AppText.body(color: colors.text2)
-                    .copyWith(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Batal',
+              style: AppText.body(
+                color: colors.text2,
+              ).copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('Hapus',
-                style: AppText.body(color: colors.expense)
-                    .copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              'Hapus',
+              style: AppText.body(
+                color: colors.expense,
+              ).copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -948,15 +993,13 @@ class _RemoveButtonState extends State<_RemoveButton> {
         height: 36,
         child: Padding(
           padding: EdgeInsets.all(8),
-          child:
-              CircularProgressIndicator(strokeWidth: 2),
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
       );
     }
     return IconButton(
       onPressed: _showConfirm,
-      icon: Icon(Icons.person_remove_outlined,
-          color: colors.expense, size: 19),
+      icon: Icon(Icons.person_remove_outlined, color: colors.expense, size: 19),
       splashRadius: 20,
       tooltip: 'Hapus anggota',
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -984,8 +1027,10 @@ class _InviteSheet extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Undang Anggota',
-              style: AppText.screenTitle(color: colors.text)),
+          Text(
+            'Undang Anggota',
+            style: AppText.screenTitle(color: colors.text),
+          ),
           const SizedBox(height: 8),
           Text(
             'Bagikan kode ini kepada anggota keluarga yang ingin bergabung.',
@@ -1005,7 +1050,9 @@ class _InviteSheet extends ConsumerWidget {
                     height: 48,
                     child: Center(
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: colors.primary),
+                        strokeWidth: 2,
+                        color: colors.primary,
+                      ),
                     ),
                   )
                 : Text(
@@ -1039,10 +1086,13 @@ class _InviteSheet extends ConsumerWidget {
                       backgroundColor: colors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm)),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
                       elevation: 0,
                       textStyle: GoogleFonts.plusJakartaSans(
-                          fontSize: 14, fontWeight: FontWeight.w700),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -1058,7 +1108,8 @@ class _InviteSheet extends ConsumerWidget {
                       if (code != null) {
                         await SharePlus.instance.share(
                           ShareParams(
-                            text: 'Bergabung ke keluarga saya di DuitKita! '
+                            text:
+                                'Bergabung ke keluarga saya di DuitKita! '
                                 'Gunakan kode undangan: $code\n\n'
                                 'Download DuitKita untuk mulai kelola keuangan '
                                 'keluarga bersama.',
@@ -1072,9 +1123,12 @@ class _InviteSheet extends ConsumerWidget {
                       side: BorderSide(color: colors.border2, width: 1.5),
                       foregroundColor: colors.text,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.sm)),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
                       textStyle: GoogleFonts.plusJakartaSans(
-                          fontSize: 14, fontWeight: FontWeight.w600),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -1099,8 +1153,7 @@ class _EditProfileSheet extends ConsumerStatefulWidget {
   final Member member;
 
   @override
-  ConsumerState<_EditProfileSheet> createState() =>
-      _EditProfileSheetState();
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
 }
 
 class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
@@ -1139,9 +1192,12 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
 
     setState(() => _uploadingPhoto = true);
     try {
-      final path =
-          await ref.read(apiClientProvider).uploadAvatar(File(picked.path));
-      await ref.read(memberRepoProvider).upsert(
+      final path = await ref
+          .read(apiClientProvider)
+          .uploadAvatar(File(picked.path));
+      await ref
+          .read(memberRepoProvider)
+          .upsert(
             MembersCompanion(
               id: Value(widget.member.id),
               avatarPath: Value(path),
@@ -1217,7 +1273,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
 
       await ref.read(apiClientProvider).updateMe(body);
 
-      await ref.read(memberRepoProvider).upsert(
+      await ref
+          .read(memberRepoProvider)
+          .upsert(
             MembersCompanion(
               id: Value(widget.member.id),
               name: Value(_nameCtrl.text.trim()),
@@ -1260,15 +1318,15 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         borderSide: BorderSide(color: colors.primary, width: 1.5),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final passwordMismatch = _passwordCtrl.text.isNotEmpty &&
+    final passwordMismatch =
+        _passwordCtrl.text.isNotEmpty &&
         _passwordCtrl.text != _confirmCtrl.text;
 
     return SingleChildScrollView(
@@ -1282,8 +1340,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Edit Profil',
-              style: AppText.screenTitle(color: colors.text)),
+          Text('Edit Profil', style: AppText.screenTitle(color: colors.text)),
           const SizedBox(height: 16),
 
           // ── Foto Profil ─────────────────────────────────────────────────
@@ -1307,7 +1364,8 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   if (_uploadingPhoto)
                     const Positioned.fill(
                       child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2)),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     )
                   else
                     Positioned(
@@ -1321,8 +1379,11 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                           shape: BoxShape.circle,
                           border: Border.all(color: colors.surface, width: 2),
                         ),
-                        child: Icon(Icons.camera_alt_rounded,
-                            color: colors.onPrimary, size: 13),
+                        child: Icon(
+                          Icons.camera_alt_rounded,
+                          color: colors.onPrimary,
+                          size: 13,
+                        ),
                       ),
                     ),
                 ],
@@ -1368,8 +1429,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           const SizedBox(height: 14),
 
           // ── Password baru (opsional) ─────────────────────────────────────
-          Text('Password Baru (opsional)',
-              style: AppText.label(color: colors.text2)),
+          Text(
+            'Password Baru (opsional)',
+            style: AppText.label(color: colors.text2),
+          ),
           const SizedBox(height: 6),
           TextField(
             controller: _passwordCtrl,
@@ -1384,15 +1447,17 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               controller: _confirmCtrl,
               obscureText: true,
               style: AppText.body(color: colors.text),
-              decoration: _fieldDecoration(
-                      colors, 'Konfirmasi password baru')
+              decoration: _fieldDecoration(colors, 'Konfirmasi password baru')
                   .copyWith(
-                errorText: passwordMismatch ? 'Password tidak cocok' : null,
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  borderSide: const BorderSide(color: Colors.red, width: 1.5),
-                ),
-              ),
+                    errorText: passwordMismatch ? 'Password tidak cocok' : null,
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      borderSide: const BorderSide(
+                        color: Colors.red,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
               onChanged: (_) => setState(() {}),
             ),
           ],
@@ -1404,8 +1469,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: _kAvatarHues.map((hue) {
-              final isSelected =
-                  (_selectedHue - hue).abs() < 1;
+              final isSelected = (_selectedHue - hue).abs() < 1;
               final color = HSLColor.fromAHSL(1, hue, 0.65, 0.50).toColor();
               return GestureDetector(
                 onTap: () => setState(() => _selectedHue = hue),
@@ -1425,13 +1489,12 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                               color: color.withValues(alpha: 0.5),
                               blurRadius: 6,
                               spreadRadius: 1,
-                            )
+                            ),
                           ]
                         : null,
                   ),
                   child: isSelected
-                      ? const Icon(Icons.check,
-                          size: 16, color: Colors.white)
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
                       : null,
                 ),
               );
@@ -1443,17 +1506,13 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           if (_errorMsg != null) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.red.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
-              child: Text(
-                _errorMsg!,
-                style: AppText.micro(color: Colors.red),
-              ),
+              child: Text(_errorMsg!, style: AppText.micro(color: Colors.red)),
             ),
             const SizedBox(height: 12),
           ],
@@ -1478,11 +1537,17 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : Text('Simpan',
+                  : Text(
+                      'Simpan',
                       style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -1514,10 +1579,23 @@ class _ChangePinSheetState extends ConsumerState<_ChangePinSheet> {
     final pin = _ctrl.text.trim();
     if (pin.length != 6 || _saving) return;
     setState(() => _saving = true);
-    await ref.read(sessionRepoProvider).set('userPin', pin);
-    if (mounted) {
-      Navigator.of(context).pop();
-      AppToast.show(context, 'PIN berhasil diperbarui');
+    try {
+      await ref.read(apiClientProvider).setPin(pin);
+      await ref.read(sessionRepoProvider).set('hasPin', 'true');
+      await ref.read(sessionRepoProvider).delete('userPin');
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppToast.show(context, 'PIN berhasil diperbarui');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        AppToast.show(
+          context,
+          'Gagal menyimpan PIN. Periksa koneksi internet.',
+          success: false,
+        );
+      }
     }
   }
 
@@ -1535,8 +1613,7 @@ class _ChangePinSheetState extends ConsumerState<_ChangePinSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Ganti PIN',
-              style: AppText.screenTitle(color: colors.text)),
+          Text('Ganti PIN', style: AppText.screenTitle(color: colors.text)),
           const SizedBox(height: 8),
           Text(
             'Masukkan PIN baru (6 digit)',
@@ -1564,11 +1641,12 @@ class _ChangePinSheetState extends ConsumerState<_ChangePinSheet> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide:
-                    BorderSide(color: colors.primary, width: 1.5),
+                borderSide: BorderSide(color: colors.primary, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
+                horizontal: 14,
+                vertical: 12,
+              ),
               hintText: '••••••',
               hintStyle: AppText.body(color: colors.text3),
             ),
@@ -1594,11 +1672,17 @@ class _ChangePinSheetState extends ConsumerState<_ChangePinSheet> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : Text('Simpan PIN',
+                  : Text(
+                      'Simpan PIN',
                       style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -1633,19 +1717,41 @@ class _LogoutButton extends ConsumerWidget {
           backgroundColor: colors.expenseTint,
           side: BorderSide(color: colors.expense.withValues(alpha: 0.3)),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.base)),
+            borderRadius: BorderRadius.circular(AppRadius.base),
+          ),
         ),
       ),
     );
   }
 
   void _showLogoutConfirm(BuildContext context, WidgetRef ref) {
-    AppSheet.show<bool>(
-      context: context,
-      child: _LogoutConfirmSheet(),
-    ).then((confirmed) async {
+    AppSheet.show<bool>(context: context, child: _LogoutConfirmSheet()).then((
+      confirmed,
+    ) async {
       if (confirmed == true) {
-        await ref.read(sessionRepoProvider).set('currentUserId', '');
+        final sync = ref.read(syncServiceProvider);
+        if (await sync.hasPendingSync()) {
+          await sync.pushAllPending();
+          if (await sync.hasPendingSync()) {
+            if (context.mounted) {
+              AppToast.show(
+                context,
+                'Masih ada data belum tersinkron. Logout dibatalkan.',
+                success: false,
+              );
+            }
+            return;
+          }
+        }
+
+        final api = ref.read(apiClientProvider);
+        try {
+          await api.logout();
+        } catch (_) {
+          await api.clearToken();
+        }
+        await ref.read(dbProvider).clearAll();
+        await ref.read(sessionRepoProvider).clear();
         if (context.mounted) {
           context.go('/login');
         }
@@ -1663,11 +1769,14 @@ class _LogoutConfirmSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Keluar dari DuitKita',
-              style: AppText.screenTitle(color: colors.text)),
+          Text(
+            'Keluar dari DuitKita',
+            style: AppText.screenTitle(color: colors.text),
+          ),
           const SizedBox(height: 12),
           Text(
-            'Kamu akan keluar dari akun. Data lokal tetap tersimpan di perangkat.',
+            'Pastikan semua perubahan sudah tersinkron. Data akun akan '
+            'dihapus dari perangkat ini setelah logout.',
             style: AppText.body(color: colors.text2),
             textAlign: TextAlign.center,
           ),
@@ -1680,14 +1789,16 @@ class _LogoutConfirmSheet extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: colors.border2),
                     shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.sm)),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 13),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
-                  child: Text('Batal',
-                      style: AppText.body(color: colors.text2)
-                          .copyWith(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Batal',
+                    style: AppText.body(
+                      color: colors.text2,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1698,17 +1809,19 @@ class _LogoutConfirmSheet extends StatelessWidget {
                     backgroundColor: colors.expense,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.sm)),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
                     elevation: 0,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 13),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
-                  child: Text('Keluar',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
+                  child: Text(
+                    'Keluar',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],

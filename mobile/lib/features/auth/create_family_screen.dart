@@ -36,7 +36,8 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final canSubmit = _nameCtrl.text.isNotEmpty &&
+    final canSubmit =
+        _nameCtrl.text.isNotEmpty &&
         _familyCtrl.text.isNotEmpty &&
         _emailCtrl.text.isNotEmpty &&
         _passCtrl.text.isNotEmpty;
@@ -50,30 +51,58 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
-            Text('Mulai perjalanan keuangan keluargamu',
-                style: AppText.sectionTitle(color: colors.text2)),
+            Text(
+              'Mulai perjalanan keuangan keluargamu',
+              style: AppText.sectionTitle(color: colors.text2),
+            ),
             const SizedBox(height: 20),
-            _Field(ctrl: _nameCtrl, label: 'Nama kamu', icon: Icons.person_outline,
-                onChanged: (_) => setState(() {})),
+            _Field(
+              ctrl: _nameCtrl,
+              label: 'Nama kamu',
+              icon: Icons.person_outline,
+              onChanged: (_) => setState(() {}),
+            ),
             const SizedBox(height: 12),
-            _Field(ctrl: _familyCtrl, label: 'Nama keluarga', icon: Icons.home_outlined,
-                onChanged: (_) => setState(() {})),
+            _Field(
+              ctrl: _familyCtrl,
+              label: 'Nama keluarga',
+              icon: Icons.home_outlined,
+              onChanged: (_) => setState(() {}),
+            ),
             const SizedBox(height: 12),
-            _Field(ctrl: _emailCtrl, label: 'Email', icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                onChanged: (_) => setState(() {})),
+            _Field(
+              ctrl: _emailCtrl,
+              label: 'Email',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => setState(() {}),
+            ),
             const SizedBox(height: 12),
-            _Field(ctrl: _phoneCtrl, label: 'No. HP (opsional)', icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                onChanged: (_) => setState(() {})),
+            _Field(
+              ctrl: _phoneCtrl,
+              label: 'No. HP (opsional)',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+              onChanged: (_) => setState(() {}),
+            ),
             const SizedBox(height: 12),
-            _Field(ctrl: _passCtrl, label: 'Kata sandi', icon: Icons.lock_outline_rounded,
-                obscure: _obscure, onChanged: (_) => setState(() {}),
-                suffix: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      size: 20, color: colors.text3),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                )),
+            _Field(
+              ctrl: _passCtrl,
+              label: 'Kata sandi',
+              icon: Icons.lock_outline_rounded,
+              obscure: _obscure,
+              onChanged: (_) => setState(() {}),
+              suffix: IconButton(
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                  color: colors.text3,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
             const SizedBox(height: 16),
             // Info box
             Container(
@@ -85,7 +114,11 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded, color: colors.primary, size: 18),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: colors.primary,
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -104,14 +137,26 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: _loading
-                    ? const SizedBox(width: 20, height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text('Buat & Mulai',
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Buat & Mulai',
                         style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 32),
@@ -134,24 +179,25 @@ class _CreateFamilyScreenState extends ConsumerState<CreateFamilyScreen> {
       if (_phoneCtrl.text.trim().isNotEmpty) {
         body['phone'] = _phoneCtrl.text.trim();
       }
-      final data = await api.register(body);
-      final sessionRepo = ref.read(sessionRepoProvider);
-      final userId = data['user']?['id'] as int?;
-      if (userId != null) await sessionRepo.setCurrentUserId(userId);
-      final inviteCode = data['household']?['invite_code'] as String?;
-      if (inviteCode != null) await sessionRepo.setInviteCode(inviteCode);
+      await api.register(body);
 
       // Pull fresh data from server
       await ref.read(dbProvider).clearAll();
-      await ref.read(syncServiceProvider).initialPull();
+      await ref.read(sessionRepoProvider).clear();
+      try {
+        await ref.read(syncServiceProvider).initialPull();
+      } catch (_) {
+        await api.clearToken();
+        rethrow;
+      }
 
       if (mounted) context.go('/home');
     } catch (e) {
-      setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal: $e')),
-        );
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
       }
     }
   }
@@ -191,15 +237,24 @@ class _Field extends StatelessWidget {
           labelText: label,
           prefixIcon: Icon(icon, size: 20, color: colors.text3),
           suffixIcon: suffix,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           filled: true,
           fillColor: colors.surface,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: colors.border2)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: colors.border2)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: colors.primary, width: 1.5)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.border2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.border2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.primary, width: 1.5),
+          ),
         ),
       ),
     );

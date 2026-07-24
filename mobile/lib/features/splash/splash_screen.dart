@@ -28,22 +28,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       duration: const Duration(milliseconds: 800),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _scale = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scale = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
 
     Future.delayed(const Duration(seconds: 2), () async {
       final updateService = ref.read(updateServiceProvider);
-      final update = await updateService.checkUpdate();
+      final update = kReleaseMode ? await updateService.checkUpdate() : null;
       if (update != null && mounted) {
         await showDialog<void>(
           context: context,
           barrierDismissible: !update.force,
-          builder: (_) => _UpdateDialog(
-            update: update,
-            updateService: updateService,
-          ),
+          builder: (_) =>
+              _UpdateDialog(update: update, updateService: updateService),
         );
       }
       if (mounted) context.go('/lock');
@@ -160,55 +159,60 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     final update = widget.update;
 
     return AlertDialog(
-      title: Text(_stage == _UpdateStage.info
-          ? 'Update Tersedia 🎉'
-          : _stage == _UpdateStage.downloading
-              ? 'Mengunduh Update…'
-              : 'Unduhan Gagal'),
+      title: Text(
+        _stage == _UpdateStage.info
+            ? 'Update Tersedia 🎉'
+            : _stage == _UpdateStage.downloading
+            ? 'Mengunduh Update…'
+            : 'Unduhan Gagal',
+      ),
       content: switch (_stage) {
-        _UpdateStage.info => Text('Versi ${update.version} tersedia\n\n${update.notes}'),
+        _UpdateStage.info => Text(
+          'Versi ${update.version} tersedia\n\n${update.notes}',
+        ),
         _UpdateStage.downloading => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: _progress > 0 ? _progress : null,
-                  minHeight: 8,
-                ),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: _progress > 0 ? _progress : null,
+                minHeight: 8,
               ),
-              const SizedBox(height: 10),
-              Text('${(_progress * 100).toStringAsFixed(0)}%'),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            Text('${(_progress * 100).toStringAsFixed(0)}%'),
+          ],
+        ),
         _UpdateStage.error => const Text(
-            'Gagal mengunduh update. Periksa koneksi internet dan coba lagi.'),
+          'Gagal mengunduh update. Periksa koneksi internet dan coba lagi.',
+        ),
       },
       actions: switch (_stage) {
         _UpdateStage.info => [
-            if (!update.force)
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Nanti'),
-              ),
-            FilledButton(
-              onPressed: _startDownload,
-              child: const Text('Update Sekarang'),
+          if (!update.force)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Nanti'),
             ),
-          ],
+          FilledButton(
+            onPressed: _startDownload,
+            child: const Text('Update Sekarang'),
+          ),
+        ],
         _UpdateStage.downloading => [],
         _UpdateStage.error => [
-            if (!update.force)
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Nanti'),
-              ),
-            FilledButton(
-              onPressed: _startDownload,
-              child: const Text('Coba Lagi'),
+          if (!update.force)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Nanti'),
             ),
-          ],
+          FilledButton(
+            onPressed: _startDownload,
+            child: const Text('Coba Lagi'),
+          ),
+        ],
       },
     );
   }

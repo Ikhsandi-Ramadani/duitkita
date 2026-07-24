@@ -21,7 +21,6 @@ class AppLockScreen extends ConsumerStatefulWidget {
 class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   final List<String> _digits = [];
   bool _checking = false;
-  bool _hasPinSetup = false;
   bool _loadingPinCheck = true;
   String? _errorMsg;
   final _localAuth = LocalAuthentication();
@@ -33,29 +32,42 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   Future<void> _checkPinSetup() async {
+    final sessionRepo = ref.read(sessionRepoProvider);
+    if (await sessionRepo.get('demoMode') == 'true') {
+      if (mounted) context.go('/home');
+      return;
+    }
+    final localHasPinValue = await sessionRepo.get('hasPin');
     try {
       final me = await ref.read(apiClientProvider).me();
-      final hasPin = me['has_pin'] == true;
+      final user = me['user'] as Map<String, dynamic>?;
+      final hasPin = user?['has_pin'] == true;
+      await sessionRepo.set('hasPin', hasPin.toString());
       if (!mounted) return;
       if (!hasPin) {
         // Server explicitly says no PIN — safe to skip lock
         context.go('/home');
         return;
       }
-      setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
-    } on DioException catch (e) {
-      // Network error (no response) — fail closed: show PIN screen
+      setState(() {
+        _loadingPinCheck = false;
+      });
+    } on DioException {
       if (!mounted) return;
-      if (e.response != null) {
-        // Server responded with an error (e.g. 401 token expired) — fail closed
-        setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
-      } else {
-        // No connectivity — fail closed
-        setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+      if (localHasPinValue == 'false') {
+        context.go('/home');
+        return;
       }
+      setState(() {
+        _loadingPinCheck = false;
+      });
     } catch (_) {
       // Any other error — fail closed
-      if (mounted) setState(() { _hasPinSetup = true; _loadingPinCheck = false; });
+      if (mounted) {
+        setState(() {
+          _loadingPinCheck = false;
+        });
+      }
     }
   }
 
@@ -69,14 +81,14 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     }
     final membersAsync = ref.watch(membersProvider);
     final userIdAsync = ref.watch(currentUserIdProvider);
-    final sessionRepo = ref.watch(sessionRepoProvider);
+    final biometricEnabled = ref.watch(biometricEnabledProvider).value ?? false;
 
     final currentUserId = userIdAsync.value;
     final members = membersAsync.value ?? [];
     final Member? member = members.cast<Member?>().firstWhere(
-          (m) => m?.id == currentUserId,
-          orElse: () => members.isNotEmpty ? members.first : null,
-        );
+      (m) => m?.id == currentUserId,
+      orElse: () => members.isNotEmpty ? members.first : null,
+    );
 
     return Scaffold(
       body: Container(
@@ -89,34 +101,43 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 3),
-              _UserGreeting(member: member, checking: _checking),
-              const SizedBox(height: 24),
-              _PinDots(count: _digits.length),
-              const SizedBox(height: 12),
-              if (_errorMsg != null)
-                Text(
-                  _errorMsg!,
-                  style: TextStyle(color: Colors.red.shade300, fontSize: 13),
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 32,
                 ),
-              const Spacer(flex: 3),
-              _Keypad(
-                onDigit: _onDigit,
-                onBackspace: _onBackspace,
-                onBiometric: _onBiometric,
-                memberName: member?.name ?? 'kamu',
-                onSwitchAccount: () async {
-                  final db = ref.read(dbProvider);
-                  await ref.read(apiClientProvider).clearToken();
-                  await db.delete(db.sessionKv).go();
-                  await db.clearAll();
-                  if (context.mounted) context.go('/login');
-                },
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 3),
+                      _UserGreeting(member: member, checking: _checking),
+                      const SizedBox(height: 24),
+                      _PinDots(count: _digits.length),
+                      const SizedBox(height: 12),
+                      if (_errorMsg != null)
+                        Text(
+                          _errorMsg!,
+                          style: TextStyle(
+                            color: Colors.red.shade300,
+                            fontSize: 13,
+                          ),
+                        ),
+                      const Spacer(flex: 3),
+                      _Keypad(
+                        onDigit: _onDigit,
+                        onBackspace: _onBackspace,
+                        onBiometric: biometricEnabled ? _onBiometric : null,
+                        memberName: member?.name ?? 'kamu',
+                        onSwitchAccount: _switchAccount,
+                      ),
+                      const Spacer(flex: 1),
+                    ],
+                  ),
+                ),
               ),
-              const Spacer(flex: 1),
-            ],
+            ),
           ),
         ),
       ),
@@ -137,7 +158,10 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   Future<void> _verifyPin() async {
-    setState(() { _checking = true; _errorMsg = null; });
+    setState(() {
+      _checking = true;
+      _errorMsg = null;
+    });
     try {
       final ok = await ref.read(apiClientProvider).verifyPin(_digits.join());
       if (!mounted) return;
@@ -145,31 +169,59 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         context.go('/home');
       } else {
         HapticFeedback.vibrate();
-        setState(() { _digits.clear(); _checking = false; _errorMsg = 'PIN salah'; });
+        setState(() {
+          _digits.clear();
+          _checking = false;
+          _errorMsg = 'PIN salah';
+        });
       }
     } on DioException catch (e) {
       if (!mounted) return;
-      if (e.response?.statusCode == 401) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 422) {
         // Wrong PIN — server confirmed
         HapticFeedback.vibrate();
-        setState(() { _digits.clear(); _checking = false; _errorMsg = 'PIN salah'; });
+        setState(() {
+          _digits.clear();
+          _checking = false;
+          _errorMsg = 'PIN salah';
+        });
       } else if (e.response != null) {
         // Other server error
         HapticFeedback.vibrate();
-        setState(() { _digits.clear(); _checking = false; _errorMsg = 'Terjadi kesalahan, coba lagi'; });
+        setState(() {
+          _digits.clear();
+          _checking = false;
+          _errorMsg = 'Terjadi kesalahan, coba lagi';
+        });
       } else {
         // No connectivity — do NOT go home
-        setState(() { _digits.clear(); _checking = false; _errorMsg = 'Tidak ada koneksi, coba lagi'; });
+        setState(() {
+          _digits.clear();
+          _checking = false;
+          _errorMsg = 'Tidak ada koneksi, coba lagi';
+        });
       }
     } catch (_) {
       if (!mounted) return;
       HapticFeedback.vibrate();
-      setState(() { _digits.clear(); _checking = false; _errorMsg = 'Terjadi kesalahan, coba lagi'; });
+      setState(() {
+        _digits.clear();
+        _checking = false;
+        _errorMsg = 'Terjadi kesalahan, coba lagi';
+      });
     }
   }
 
   Future<void> _onBiometric() async {
     try {
+      final enabled =
+          await ref.read(sessionRepoProvider).get('biometricEnabled') == 'true';
+      if (!enabled) {
+        if (mounted) {
+          AppToast.show(context, 'Aktifkan biometrik dari halaman Profil');
+        }
+        return;
+      }
       final isSupported = await _localAuth.isDeviceSupported();
       if (!isSupported) {
         if (mounted) AppToast.show(context, 'HP ini tidak mendukung biometrik');
@@ -177,7 +229,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       }
       final canCheck = await _localAuth.canCheckBiometrics;
       if (!canCheck) {
-        if (mounted) AppToast.show(context, 'Biometrik tidak aktif di pengaturan HP');
+        if (mounted) {
+          AppToast.show(context, 'Biometrik tidak aktif di pengaturan HP');
+        }
         return;
       }
       final available = await _localAuth.getAvailableBiometrics();
@@ -195,57 +249,37 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
       }
     } catch (e) {
       if (kDebugMode) print('[Biometric] error: $e');
-      if (mounted) AppToast.show(context, 'Gagal membuka biometrik. Coba lagi.');
+      if (mounted) {
+        AppToast.show(context, 'Gagal membuka biometrik. Coba lagi.');
+      }
     }
   }
-}
 
-// ---------------------------------------------------------------------------
-// Sub-widgets
-// ---------------------------------------------------------------------------
+  Future<void> _switchAccount() async {
+    final sync = ref.read(syncServiceProvider);
+    if (await sync.hasPendingSync()) {
+      await sync.pushAllPending();
+      if (await sync.hasPendingSync()) {
+        if (mounted) {
+          AppToast.show(
+            context,
+            'Masih ada data belum tersinkron. Ganti akun dibatalkan.',
+            success: false,
+          );
+        }
+        return;
+      }
+    }
 
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.sessionRepo});
-  final dynamic sessionRepo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
-          ),
-          child: const Icon(Icons.account_balance_wallet_outlined,
-              color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'DuitKita',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 4),
-        FutureBuilder<String?>(
-          future: sessionRepo.get('householdName') as Future<String?>,
-          builder: (_, snap) => Text(
-            snap.data ?? 'Keuangan Keluarga',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.75),
-            ),
-          ),
-        ),
-      ],
-    );
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.logout();
+    } catch (_) {
+      await api.clearToken();
+    }
+    await ref.read(dbProvider).clearAll();
+    await ref.read(sessionRepoProvider).clear();
+    if (mounted) context.go('/login');
   }
 }
 
@@ -333,7 +367,7 @@ class _Keypad extends StatelessWidget {
 
   final ValueChanged<String> onDigit;
   final VoidCallback onBackspace;
-  final VoidCallback onBiometric;
+  final VoidCallback? onBiometric;
   final String memberName;
   final VoidCallback onSwitchAccount;
 
@@ -350,19 +384,39 @@ class _Keypad extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _KpButton(onTap: onBiometric,
-                child: const Icon(Icons.fingerprint_rounded, color: Colors.white, size: 30)),
+            if (onBiometric != null)
+              _KpButton(
+                onTap: onBiometric!,
+                child: const Icon(
+                  Icons.fingerprint_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              )
+            else
+              const SizedBox(width: 72, height: 72),
             const SizedBox(width: 16),
             _KpButton(
-                onTap: () => onDigit('0'),
-                child: Text('0',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white))),
+              onTap: () => onDigit('0'),
+              child: Text(
+                '0',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
             const SizedBox(width: 16),
             _KpButton(
-                onTap: onBackspace,
-                faded: true,
-                child: const Icon(Icons.backspace_outlined, color: Colors.white, size: 24)),
+              onTap: onBackspace,
+              faded: true,
+              child: const Icon(
+                Icons.backspace_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -388,29 +442,51 @@ class _Keypad extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _KpButton(
-            onTap: () => onDigit(digits[0]),
-            child: Text(digits[0],
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white))),
+          onTap: () => onDigit(digits[0]),
+          child: Text(
+            digits[0],
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
         const SizedBox(width: 16),
         _KpButton(
-            onTap: () => onDigit(digits[1]),
-            child: Text(digits[1],
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white))),
+          onTap: () => onDigit(digits[1]),
+          child: Text(
+            digits[1],
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
         const SizedBox(width: 16),
         _KpButton(
-            onTap: () => onDigit(digits[2]),
-            child: Text(digits[2],
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white))),
+          onTap: () => onDigit(digits[2]),
+          child: Text(
+            digits[2],
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
 class _KpButton extends StatelessWidget {
-  const _KpButton({required this.onTap, required this.child, this.faded = false});
+  const _KpButton({
+    required this.onTap,
+    required this.child,
+    this.faded = false,
+  });
   final VoidCallback onTap;
   final Widget child;
   final bool faded;

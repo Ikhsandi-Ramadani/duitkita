@@ -28,6 +28,7 @@ class UpdateService {
   UpdateService(this._dio);
 
   Future<UpdateInfo?> checkUpdate() async {
+    if (!Platform.isAndroid) return null;
     try {
       final info = await PackageInfo.fromPlatform();
       final currentBuild = normalizedBuildNumber(info.buildNumber);

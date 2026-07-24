@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SyncPushRequest;
-use App\Http\Resources\TransactionResource;
 use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Debt;
@@ -17,24 +16,22 @@ use App\Models\Wallet;
 use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class SyncController extends Controller
 {
-    public function __construct(private readonly BalanceService $balanceService)
-    {
-    }
+    public function __construct(private readonly BalanceService $balanceService) {}
 
     public function pull(Request $request): JsonResponse
     {
         $householdId = $request->user()->household_id;
-        $since       = $request->input('since', '0');
+        $since = $request->input('since', '0');
 
         // Accept unix ms timestamp (int) or ISO8601 string
         $sinceDate = is_numeric($since)
-            ? \Illuminate\Support\Carbon::createFromTimestampMs((int) $since)
-            : \Illuminate\Support\Carbon::parse($since);
+            ? Carbon::createFromTimestampMs((int) $since)
+            : Carbon::parse($since);
 
         // withTrashed() queries below rely on Eloquent's deleted_at timestamp,
         // but the raw model JSON has no `deleted` boolean — the mobile app's
@@ -61,9 +58,10 @@ class SyncController extends Controller
             ->with('splits.user:id,name,avatar_hue')
             ->get());
 
-        $budgets = Budget::where('household_id', $householdId)
+        $budgets = $withDeletedFlag(Budget::withTrashed()
+            ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
-            ->get();
+            ->get());
 
         $savingsGoals = $withDeletedFlag(SavingsGoal::withTrashed()
             ->where('household_id', $householdId)
@@ -75,9 +73,10 @@ class SyncController extends Controller
             ->where('updated_at', '>=', $sinceDate)
             ->get());
 
-        $recurrings = Recurring::where('household_id', $householdId)
+        $recurrings = $withDeletedFlag(Recurring::withTrashed()
+            ->where('household_id', $householdId)
             ->where('updated_at', '>=', $sinceDate)
-            ->get();
+            ->get());
 
         $members = User::where('household_id', $householdId)
             ->get(['id', 'name', 'email', 'phone', 'role', 'avatar_hue', 'avatar_path']);
@@ -89,15 +88,15 @@ class SyncController extends Controller
             ->get();
 
         return response()->json([
-            'server_time'   => now()->toISOString(),
-            'members'       => $members,
-            'wallets'       => $wallets,
-            'categories'    => $categories,
-            'transactions'  => $transactions,
-            'budgets'       => $budgets,
+            'server_time' => now()->toISOString(),
+            'members' => $members,
+            'wallets' => $wallets,
+            'categories' => $categories,
+            'transactions' => $transactions,
+            'budgets' => $budgets,
             'savings_goals' => $savingsGoals,
-            'debts'         => $debts,
-            'recurrings'    => $recurrings,
+            'debts' => $debts,
+            'recurrings' => $recurrings,
             'notifications' => $notifications,
         ]);
     }
@@ -105,11 +104,56 @@ class SyncController extends Controller
     public function push(SyncPushRequest $request): JsonResponse
     {
         $householdId = $request->user()->household_id;
-        $items       = $request->input('transactions');
-        $results     = [];
+        $items = $request->input('transactions');
+        $results = [];
 
         foreach ($items as $item) {
             $clientId = $item['client_id'];
+
+            $wallet = Wallet::where('id', $item['wallet_id'])
+                ->where('household_id', $householdId)
+                ->first();
+            if (! $wallet) {
+                return response()->json([
+                    'message' => 'Wallet transaksi tidak berada dalam household pengguna.',
+                ], 422);
+            }
+            if ($wallet->scope === 'personal' && (int) $wallet->owner_user_id !== (int) $request->user()->id) {
+                abort(403, 'Cannot record transaction on another member\'s personal wallet.');
+            }
+
+            if (! empty($item['target_wallet_id'])) {
+                $targetWalletExists = Wallet::where('id', $item['target_wallet_id'])
+                    ->where('household_id', $householdId)
+                    ->exists();
+                if (! $targetWalletExists) {
+                    return response()->json([
+                        'message' => 'Wallet tujuan tidak berada dalam household pengguna.',
+                    ], 422);
+                }
+            }
+
+            if (! empty($item['category_id'])) {
+                $categoryExists = Category::where('id', $item['category_id'])
+                    ->where('household_id', $householdId)
+                    ->exists();
+                if (! $categoryExists) {
+                    return response()->json([
+                        'message' => 'Kategori tidak berada dalam household pengguna.',
+                    ], 422);
+                }
+            }
+
+            if (! empty($item['spent_by'])) {
+                $memberExists = User::where('id', $item['spent_by'])
+                    ->where('household_id', $householdId)
+                    ->exists();
+                if (! $memberExists) {
+                    return response()->json([
+                        'message' => 'Anggota tidak berada dalam household pengguna.',
+                    ], 422);
+                }
+            }
 
             // Mobile pre-signs amount (negative for expense/transfer) before
             // pushing, but BalanceService::apply() applies its own sign via
@@ -129,19 +173,23 @@ class SyncController extends Controller
             // All three must be handled here, not just deletion, or edits and
             // retries silently do nothing while mobile believes they synced.
             $existing = Transaction::withTrashed()->where('client_id', $clientId)->first();
+            if ($existing && (int) $existing->household_id !== (int) $householdId) {
+                abort(403, 'Transaction client_id belongs to another household.');
+            }
             if ($existing) {
                 $deleted = (bool) ($item['deleted'] ?? false);
 
-                if ($deleted && !$existing->trashed()) {
+                if ($deleted && ! $existing->trashed()) {
                     DB::transaction(function () use ($existing) {
                         $this->balanceService->reverse($existing);
                         $existing->delete();
                     });
                     $results[] = ['client_id' => $clientId, 'status' => 'deleted', 'id' => $existing->id];
+
                     continue;
                 }
 
-                if (!$deleted && !$existing->trashed()) {
+                if (! $deleted && ! $existing->trashed()) {
                     $incomingAmount = $normalizeAmount($item['type'], $item['amount']);
                     $unchanged = $existing->type === $item['type']
                         && (int) $existing->wallet_id === (int) $item['wallet_id']
@@ -150,35 +198,38 @@ class SyncController extends Controller
                         && (int) $existing->amount === (int) $incomingAmount
                         && (string) $existing->note === (string) ($item['note'] ?? null)
                         && $existing->spent_by === ($item['spent_by'] ?? null);
-                        // date deliberately excluded: Carbon's cast round-trip vs a
-                        // freshly-parsed string is too precision/timezone-fragile to
-                        // compare reliably, and date-only edits don't affect balance.
+                    // date deliberately excluded: Carbon's cast round-trip vs a
+                    // freshly-parsed string is too precision/timezone-fragile to
+                    // compare reliably, and date-only edits don't affect balance.
 
                     if ($unchanged) {
                         $results[] = ['client_id' => $clientId, 'status' => 'skipped', 'id' => $existing->id];
+
                         continue;
                     }
 
                     DB::transaction(function () use ($existing, $item, $incomingAmount) {
                         $this->balanceService->reverse($existing);
                         $existing->update([
-                            'type'             => $item['type'],
-                            'wallet_id'        => $item['wallet_id'],
+                            'type' => $item['type'],
+                            'wallet_id' => $item['wallet_id'],
                             'target_wallet_id' => $item['target_wallet_id'] ?? null,
-                            'category_id'      => $item['category_id'] ?? null,
-                            'amount'           => $incomingAmount,
-                            'date'             => $item['date'],
-                            'note'             => $item['note'] ?? null,
-                            'spent_by'         => $item['spent_by'] ?? null,
+                            'category_id' => $item['category_id'] ?? null,
+                            'amount' => $incomingAmount,
+                            'date' => $item['date'],
+                            'note' => $item['note'] ?? null,
+                            'spent_by' => $item['spent_by'] ?? null,
                         ]);
                         $this->balanceService->apply($existing);
                     });
                     $results[] = ['client_id' => $clientId, 'status' => 'updated', 'id' => $existing->id];
+
                     continue;
                 }
 
                 // Already deleted server-side and nothing new to apply.
                 $results[] = ['client_id' => $clientId, 'status' => 'skipped', 'id' => $existing->id];
+
                 continue;
             }
 
@@ -189,17 +240,17 @@ class SyncController extends Controller
 
             $transaction = DB::transaction(function () use ($item, $normalizeAmount, $clientId, $householdId, $request, $alreadyDeleted) {
                 $transaction = Transaction::create([
-                    'client_id'        => $clientId,
-                    'household_id'     => $householdId,
-                    'type'             => $item['type'],
-                    'wallet_id'        => $item['wallet_id'],
+                    'client_id' => $clientId,
+                    'household_id' => $householdId,
+                    'type' => $item['type'],
+                    'wallet_id' => $item['wallet_id'],
                     'target_wallet_id' => $item['target_wallet_id'] ?? null,
-                    'category_id'      => $item['category_id'] ?? null,
-                    'amount'           => $normalizeAmount($item['type'], $item['amount']),
-                    'date'             => $item['date'],
-                    'note'             => $item['note'] ?? null,
-                    'recorded_by'      => $request->user()->id,
-                    'spent_by'         => $item['spent_by'] ?? null,
+                    'category_id' => $item['category_id'] ?? null,
+                    'amount' => $normalizeAmount($item['type'], $item['amount']),
+                    'date' => $item['date'],
+                    'note' => $item['note'] ?? null,
+                    'recorded_by' => $request->user()->id,
+                    'spent_by' => $item['spent_by'] ?? null,
                 ]);
 
                 if ($alreadyDeleted) {
@@ -213,8 +264,8 @@ class SyncController extends Controller
 
             $results[] = [
                 'client_id' => $clientId,
-                'status'    => 'created',
-                'id'        => $transaction->id,
+                'status' => 'created',
+                'id' => $transaction->id,
             ];
         }
 

@@ -5,24 +5,32 @@ class SessionRepository {
   final AppDatabase _db;
 
   Future<String?> get(String key) async {
-    final row = await (
-      _db.select(_db.sessionKv)
-        ..where((t) => t.key.equals(key))
-    ).getSingleOrNull();
+    final row = await (_db.select(
+      _db.sessionKv,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
   Future<void> set(String key, String value) async {
-    await _db.into(_db.sessionKv).insertOnConflictUpdate(
-      SessionKvCompanion.insert(key: key, value: value),
-    );
+    await _db
+        .into(_db.sessionKv)
+        .insertOnConflictUpdate(
+          SessionKvCompanion.insert(key: key, value: value),
+        );
+  }
+
+  Future<void> delete(String key) async {
+    await (_db.delete(_db.sessionKv)..where((t) => t.key.equals(key))).go();
+  }
+
+  Future<void> clear() async {
+    await _db.delete(_db.sessionKv).go();
   }
 
   Stream<String?> watch(String key) {
-    return (
-      _db.select(_db.sessionKv)
-        ..where((t) => t.key.equals(key))
-    ).watchSingleOrNull().map((row) => row?.value);
+    return (_db.select(_db.sessionKv)..where((t) => t.key.equals(key)))
+        .watchSingleOrNull()
+        .map((row) => row?.value);
   }
 
   Future<int?> getCurrentUserId() async {
@@ -33,7 +41,9 @@ class SessionRepository {
   Future<void> setCurrentUserId(int id) => set('currentUserId', id.toString());
 
   Stream<int?> watchCurrentUserId() {
-    return watch('currentUserId').map((v) => v == null ? null : int.tryParse(v));
+    return watch(
+      'currentUserId',
+    ).map((v) => v == null ? null : int.tryParse(v));
   }
 
   Future<void> setInviteCode(String code) => set('inviteCode', code);

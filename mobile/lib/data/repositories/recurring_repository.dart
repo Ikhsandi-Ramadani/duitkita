@@ -22,33 +22,44 @@ class RecurringRepository {
   }
 
   Future<Recurring?> getById(int id) {
-    return (_db.select(_db.recurrings)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.recurrings,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<int> deleteById(int id) {
+    return (_db.delete(_db.recurrings)..where((t) => t.id.equals(id))).go();
   }
 
   Future<List<Recurring>> getPendingSync() {
-    return (_db.select(_db.recurrings)
-          ..where((t) => t.pendingSync.equals(true)))
-        .get();
+    return (_db.select(
+      _db.recurrings,
+    )..where((t) => t.pendingSync.equals(true))).get();
   }
 
   /// Replaces a locally-created row (pseudo id) with the server-assigned id
   /// once the recurring rule has been pushed successfully.
   Future<void> replaceWithServerId(int localId, int serverId) async {
     if (localId == serverId) {
-      await (_db.update(_db.recurrings)..where((t) => t.id.equals(localId)))
-          .write(const RecurringsCompanion(
-        pendingSync: Value(false),
-        everSynced: Value(true),
-      ));
+      await (_db.update(
+        _db.recurrings,
+      )..where((t) => t.id.equals(localId))).write(
+        const RecurringsCompanion(
+          pendingSync: Value(false),
+          everSynced: Value(true),
+        ),
+      );
       return;
     }
     final row = await getById(localId);
     if (row == null) return;
     await _db.transaction(() async {
-      await (_db.delete(_db.recurrings)..where((t) => t.id.equals(localId)))
-          .go();
-      await _db.into(_db.recurrings).insertOnConflictUpdate(
+      await (_db.delete(
+        _db.recurrings,
+      )..where((t) => t.id.equals(localId))).go();
+      await _db
+          .into(_db.recurrings)
+          .insertOnConflictUpdate(
             RecurringsCompanion.insert(
               id: Value(serverId),
               type: row.type,

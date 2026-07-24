@@ -18,37 +18,50 @@ class ApiClient {
     AliceDioAdapter? aliceAdapter,
     this.onUnauthorized,
   }) : _storage = storage ?? const FlutterSecureStorage() {
-    _dio = Dio(BaseOptions(
-      baseUrl: _kBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {'Accept': 'application/json'},
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: _kBaseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {'Accept': 'application/json'},
+      ),
+    );
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await _storage.read(key: _kTokenKey);
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        if (kDebugMode) print('[API] ${options.method} ${options.uri}');
-        handler.next(options);
-      },
-      onResponse: (response, handler) {
-        if (kDebugMode) print('[API] ${response.statusCode} ${response.requestOptions.uri}');
-        handler.next(response);
-      },
-      onError: (error, handler) {
-        if (kDebugMode) print('[API ERROR] ${error.response?.statusCode} ${error.requestOptions.uri}: ${error.response?.data}');
-        // A revoked/expired token (e.g. removed from the household) means
-        // every request from here on 401s. Without this, the app just shows
-        // confusing empty lists everywhere instead of a clean logout.
-        if (error.response?.statusCode == 401) {
-          onUnauthorized?.call();
-        }
-        handler.next(error);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _storage.read(key: _kTokenKey);
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          if (kDebugMode) print('[API] ${options.method} ${options.uri}');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          if (kDebugMode) {
+            print(
+              '[API] ${response.statusCode} ${response.requestOptions.uri}',
+            );
+          }
+          handler.next(response);
+        },
+        onError: (error, handler) async {
+          if (kDebugMode) {
+            print(
+              '[API ERROR] ${error.response?.statusCode} ${error.requestOptions.uri}: ${error.response?.data}',
+            );
+          }
+          // A revoked/expired token (e.g. removed from the household) means
+          // every request from here on 401s. Without this, the app just shows
+          // confusing empty lists everywhere instead of a clean logout.
+          if (error.response?.statusCode == 401 && !_handlingUnauthorized) {
+            _handlingUnauthorized = true;
+            await onUnauthorized?.call();
+          }
+          handler.next(error);
+        },
+      ),
+    );
 
     // Alice HTTP inspector — captures every request/response/error for the
     // in-app inspector UI. Debug-only (adapter is null in release).
@@ -59,7 +72,8 @@ class ApiClient {
 
   late final Dio _dio;
   final FlutterSecureStorage _storage;
-  final VoidCallback? onUnauthorized;
+  final Future<void> Function()? onUnauthorized;
+  bool _handlingUnauthorized = false;
 
   Dio get dio => _dio;
 
@@ -67,8 +81,10 @@ class ApiClient {
   // Token management
   // -------------------------------------------------------------------------
 
-  Future<void> persistToken(String token) =>
-      _storage.write(key: _kTokenKey, value: token);
+  Future<void> persistToken(String token) async {
+    await _storage.write(key: _kTokenKey, value: token);
+    _handlingUnauthorized = false;
+  }
 
   Future<void> clearToken() => _storage.delete(key: _kTokenKey);
 
@@ -80,12 +96,18 @@ class ApiClient {
 
   Future<Map<String, dynamic>> register(Map<String, dynamic> body) async {
     final res = await _dio.post('/auth/register', data: body);
-    return res.data as Map<String, dynamic>;
+    final data = res.data as Map<String, dynamic>;
+    final token = data['token'] as String?;
+    if (token != null) await persistToken(token);
+    return data;
   }
 
   Future<Map<String, dynamic>> join(Map<String, dynamic> body) async {
     final res = await _dio.post('/auth/join', data: body);
-    return res.data as Map<String, dynamic>;
+    final data = res.data as Map<String, dynamic>;
+    final token = data['token'] as String?;
+    if (token != null) await persistToken(token);
+    return data;
   }
 
   Future<Map<String, dynamic>> login(String identifier, String password) async {
@@ -101,7 +123,10 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> forgotPassword(String identifier) async {
-    final res = await _dio.post('/auth/forgot-password', data: {'identifier': identifier});
+    final res = await _dio.post(
+      '/auth/forgot-password',
+      data: {'identifier': identifier},
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -134,7 +159,7 @@ class ApiClient {
 
   Future<bool> verifyPin(String pin) async {
     final res = await _dio.post('/me/pin/verify', data: {'pin': pin});
-    return (res.data as Map<String, dynamic>)['valid'] == true;
+    return (res.data as Map<String, dynamic>)['verified'] == true;
   }
 
   // -------------------------------------------------------------------------
@@ -142,7 +167,8 @@ class ApiClient {
   // -------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> pushTransactions(
-      List<Map<String, dynamic>> transactions) async {
+    List<Map<String, dynamic>> transactions,
+  ) async {
     final res = await _dio.post(
       '/sync/transactions',
       data: {'transactions': transactions},
@@ -155,7 +181,10 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateDebt(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateDebt(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     final res = await _dio.put('/debts/$id', data: data);
     return res.data as Map<String, dynamic>;
   }
@@ -164,12 +193,17 @@ class ApiClient {
     await _dio.delete('/debts/$id');
   }
 
-  Future<Map<String, dynamic>> createRecurring(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createRecurring(
+    Map<String, dynamic> data,
+  ) async {
     final res = await _dio.post('/recurrings', data: data);
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateRecurring(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateRecurring(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     final res = await _dio.put('/recurrings/$id', data: data);
     return res.data as Map<String, dynamic>;
   }
@@ -179,7 +213,10 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> pullSince(int sinceTimestamp) async {
-    final res = await _dio.get('/sync', queryParameters: {'since': sinceTimestamp});
+    final res = await _dio.get(
+      '/sync',
+      queryParameters: {'since': sinceTimestamp},
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -198,7 +235,10 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateGoal(int id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateGoal(
+    int id,
+    Map<String, dynamic> body,
+  ) async {
     final res = await _dio.put('/savings-goals/$id', data: body);
     return res.data as Map<String, dynamic>;
   }
@@ -208,11 +248,14 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> contributeGoal(
-      int id, int amount, int sourceWalletId) async {
-    final res = await _dio.post('/savings-goals/$id/contribute', data: {
-      'amount': amount,
-      'source_wallet_id': sourceWalletId,
-    });
+    int id,
+    int amount,
+    int sourceWalletId,
+  ) async {
+    final res = await _dio.post(
+      '/savings-goals/$id/contribute',
+      data: {'amount': amount, 'source_wallet_id': sourceWalletId},
+    );
     return res.data as Map<String, dynamic>;
   }
 
@@ -225,7 +268,10 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateBudget(int id, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateBudget(
+    int id,
+    Map<String, dynamic> body,
+  ) async {
     final res = await _dio.put('/budgets/$id', data: body);
     return res.data as Map<String, dynamic>;
   }
@@ -250,7 +296,9 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> updateCategory(
-      int id, Map<String, dynamic> body) async {
+    int id,
+    Map<String, dynamic> body,
+  ) async {
     final res = await _dio.put('/categories/$id', data: body);
     return res.data as Map<String, dynamic>;
   }
@@ -292,7 +340,9 @@ class ApiClient {
 
   /// Replaces all splits for a synced transaction.
   Future<List<Map<String, dynamic>>> updateSplits(
-      int serverId, List<Map<String, dynamic>> splits) async {
+    int serverId,
+    List<Map<String, dynamic>> splits,
+  ) async {
     final res = await _dio.put(
       '/transactions/$serverId/splits',
       data: {'splits': splits},
@@ -310,7 +360,9 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> updateWallet(
-      int id, Map<String, dynamic> body) async {
+    int id,
+    Map<String, dynamic> body,
+  ) async {
     final res = await _dio.put('/wallets/$id', data: body);
     return res.data as Map<String, dynamic>;
   }

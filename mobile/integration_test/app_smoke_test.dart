@@ -30,7 +30,7 @@ void main() {
     );
     // Use pump instead of pumpAndSettle — Drift stream watchers never "settle".
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(seconds: 3));
   }
 
   Future<void> settle(WidgetTester tester) async {
@@ -41,20 +41,12 @@ void main() {
   testWidgets('full app walkthrough', (tester) async {
     await pumpApp(tester);
 
-    // ── App Lock: type any 6-digit PIN via keypad ──
-    expect(find.text('Masukkan PIN kamu'), findsOneWidget,
-        reason: 'should start at App Lock (seeded session)');
-    for (var i = 0; i < 6; i++) {
-      await tester.tap(find.text('1').first);
-      await tester.pump(const Duration(milliseconds: 120));
-    }
-    // _verifyPin has 220ms delay then navigates; pump past it.
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 600));
-
-    // ── Beranda ──
-    expect(find.textContaining('Total Kekayaan'), findsWidgets,
-        reason: 'home should render after unlock');
+    // ── Beranda (explicitly seeded demo sessions do not require PIN) ──
+    expect(
+      find.textContaining('Total Kekayaan'),
+      findsWidgets,
+      reason: 'home should render after unlock',
+    );
     await settle(tester);
 
     // ── Tab Transaksi ──
@@ -96,7 +88,13 @@ void main() {
     }
     await settle(tester);
 
-    for (final label in ['Anggaran', 'Tujuan', 'Utang', 'Berulang', 'Laporan']) {
+    for (final label in [
+      'Anggaran',
+      'Tujuan',
+      'Utang',
+      'Berulang',
+      'Laporan',
+    ]) {
       final tile = find.text(label);
       if (tile.evaluate().isEmpty) continue;
       await tester.tap(tile.first);

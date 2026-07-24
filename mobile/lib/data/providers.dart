@@ -1,12 +1,11 @@
 import 'package:alice/alice.dart';
 import 'package:alice_dio/alice_dio_adapter.dart';
 import 'package:flutter/foundation.dart' hide Category;
-import 'package:flutter/material.dart' hide Category, Notification;
+import 'package:flutter/material.dart' hide Notification;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'db/app_database.dart';
-import 'db/seed.dart';
 import 'api/api_client.dart';
 import 'repositories/session_repository.dart';
 import 'repositories/member_repository.dart';
@@ -31,15 +30,10 @@ final dbProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-/// Async provider that seeds the DB only when no auth token exists (demo mode).
+/// Opens the local database. Demo data is seeded only after the user explicitly
+/// chooses demo mode, never merely because an auth token is absent.
 final dbReadyProvider = FutureProvider<AppDatabase>((ref) async {
   final db = ref.watch(dbProvider);
-  final storage = ref.watch(secureStorageProvider);
-  final token = await storage.read(key: 'auth_token');
-  if (token == null) {
-    // No token = not logged in, seed demo data for unauthenticated preview
-    await seedIfEmpty(db);
-  }
   return db;
 });
 
@@ -48,9 +42,7 @@ final dbReadyProvider = FutureProvider<AppDatabase>((ref) async {
 // ---------------------------------------------------------------------------
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
-  (_) => const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  ),
+  (_) => const FlutterSecureStorage(),
 );
 
 /// Single navigator key shared between GoRouter and Alice so the inspector
@@ -87,11 +79,14 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   client = ApiClient(
     storage: storage,
     aliceAdapter: aliceAdapter,
-    onUnauthorized: () {
+    onUnauthorized: () async {
       // A 401 here means the token was revoked server-side (e.g. removed
       // from the household) — without forcing a logout, the app just shows
       // confusing empty lists everywhere instead of a clean sign-out.
-      client.clearToken();
+      await client.clearToken();
+      final db = ref.read(dbProvider);
+      await db.clearAll();
+      await ref.read(sessionRepoProvider).clear();
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
         context.go('/login');
@@ -113,9 +108,10 @@ final sessionRepoProvider = Provider<SessionRepository>((ref) {
 /// created inline inside a widget's build() — that spawns a brand new
 /// provider instance every rebuild, which briefly resets to loading/false.
 final biometricEnabledProvider = StreamProvider<bool>((ref) {
-  return ref.watch(sessionRepoProvider).watch('biometricEnabled').map(
-        (v) => v == 'true',
-      );
+  return ref
+      .watch(sessionRepoProvider)
+      .watch('biometricEnabled')
+      .map((v) => v == 'true');
 });
 
 final memberRepoProvider = Provider<MemberRepository>((ref) {
@@ -232,8 +228,10 @@ final recentTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
 });
 
 /// Budgets for a given month.
-final budgetsByMonthProvider =
-    StreamProvider.family<List<Budget>, String>((ref, month) {
+final budgetsByMonthProvider = StreamProvider.family<List<Budget>, String>((
+  ref,
+  month,
+) {
   return ref.watch(budgetRepoProvider).watchByMonth(month);
 });
 
@@ -253,16 +251,20 @@ final recurringsProvider = StreamProvider<List<Recurring>>((ref) {
 });
 
 /// Transactions by wallet.
-final txByWalletProvider =
-    StreamProvider.family<List<Transaction>, int>((ref, walletId) {
+final txByWalletProvider = StreamProvider.family<List<Transaction>, int>((
+  ref,
+  walletId,
+) {
   return ref.watch(transactionRepoProvider).watchByWallet(walletId);
 });
 
 /// Transactions grouped by date with optional filters.
-final txGroupedProvider = StreamProvider.family<
-    Map<DateTime, List<Transaction>>, TransactionFilters>((ref, filters) {
-  return ref.watch(transactionRepoProvider).watchGroupedByDate(filters);
-});
+final txGroupedProvider =
+    StreamProvider.family<Map<DateTime, List<Transaction>>, TransactionFilters>(
+      (ref, filters) {
+        return ref.watch(transactionRepoProvider).watchGroupedByDate(filters);
+      },
+    );
 
 // ---------------------------------------------------------------------------
 // Member actions
@@ -286,6 +288,12 @@ final removeMemberProvider = Provider<Future<void> Function(int)>((ref) {
 final backgroundSyncProvider = FutureProvider<void>((ref) async {
   final sync = ref.watch(syncServiceProvider);
   await sync.pushAllPending();
+  if (await sync.hasPendingSync()) {
+    throw StateError(
+      'Masih ada perubahan lokal yang belum berhasil dikirim. '
+      'Pull dibatalkan agar data lokal tidak tertimpa.',
+    );
+  }
   await sync.pull();
 });
 

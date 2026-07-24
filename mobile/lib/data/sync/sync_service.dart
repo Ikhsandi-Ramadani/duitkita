@@ -53,32 +53,32 @@ class SyncService {
     if (pending.isEmpty) return;
 
     final payload = pending
-        .map((t) => {
-              'client_id': t.clientId,
-              'type': t.type,
-              'wallet_id': t.walletId,
-              'target_wallet_id': t.targetWalletId,
-              'category_id': t.categoryId,
-              'amount': t.amount,
-              'date': t.date.toUtc().toIso8601String(),
-              'note': t.note,
-              'recorded_by': t.recordedBy,
-              'spent_by': t.spentBy,
-              'updated_at': t.updatedAt.toUtc().toIso8601String(),
-              'deleted': t.deleted,
-            })
+        .map(
+          (t) => {
+            'client_id': t.clientId,
+            'type': t.type,
+            'wallet_id': t.walletId,
+            'target_wallet_id': t.targetWalletId,
+            'category_id': t.categoryId,
+            'amount': t.amount,
+            'date': t.date.toUtc().toIso8601String(),
+            'note': t.note,
+            'recorded_by': t.recordedBy,
+            'spent_by': t.spentBy,
+            'updated_at': t.updatedAt.toUtc().toIso8601String(),
+            'deleted': t.deleted,
+          },
+        )
         .toList();
 
     try {
       final result = await api.pushTransactions(payload);
 
       // Server returns {'results': [{'client_id', 'status', 'id'}, ...]}
-      final results = (result['results'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final results =
+          (result['results'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       for (final r in results) {
-        await txRepo.markSynced(
-          r['client_id'] as String,
-          r['id'] as int,
-        );
+        await txRepo.markSynced(r['client_id'] as String, r['id'] as int);
       }
     } catch (e) {
       if (kDebugMode) print('[Sync] pushTransactions error: $e');
@@ -141,8 +141,10 @@ class SyncService {
           await api.updateRecurring(r.id, body);
           await recurringRepo.replaceWithServerId(r.id, r.id);
         } else {
-          final result =
-              await api.createRecurring({...body, 'client_ref': r.id});
+          final result = await api.createRecurring({
+            ...body,
+            'client_ref': r.id,
+          });
           final serverId = result['id'] as int?;
           if (serverId != null) {
             await recurringRepo.replaceWithServerId(r.id, serverId);
@@ -274,10 +276,27 @@ class SyncService {
     await _upsertAll(syncData);
 
     final meData = data['me'] as Map<String, dynamic>;
-    final userId = meData['id'] as int?;
+    final user = meData['user'] as Map<String, dynamic>?;
+    final household = meData['household'] as Map<String, dynamic>?;
+    final userId = user?['id'] as int?;
     if (userId != null) {
       await sessionRepo.setCurrentUserId(userId);
     }
+    final inviteCode = household?['invite_code'] as String?;
+    if (inviteCode != null) {
+      await sessionRepo.setInviteCode(inviteCode);
+    } else {
+      await sessionRepo.delete('inviteCode');
+    }
+    final householdName = household?['name'] as String?;
+    if (householdName != null) {
+      await sessionRepo.set('householdName', householdName);
+    } else {
+      await sessionRepo.delete('householdName');
+    }
+    await sessionRepo.set('hasPin', (user?['has_pin'] == true).toString());
+    await sessionRepo.set('demoMode', 'false');
+    await sessionRepo.delete('userPin');
 
     await _recordSyncTime(syncData);
   }
@@ -297,8 +316,10 @@ class SyncService {
     if (data['members'] != null) {
       try {
         final members = (data['members'] as List).cast<Map<String, dynamic>>();
-        await memberRepo.upsertAll(members
-            .map((m) => MembersCompanion(
+        await memberRepo.upsertAll(
+          members
+              .map(
+                (m) => MembersCompanion(
                   id: Value(_toInt(m['id'])),
                   name: Value((m['name'] as String?) ?? ''),
                   email: Value((m['email'] as String?) ?? ''),
@@ -306,14 +327,17 @@ class SyncService {
                   avatarHue: Value((m['avatar_hue'] as int?) ?? 162),
                   phone: Value(m['phone'] as String?),
                   avatarPath: Value(m['avatar_path'] as String?),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
         // Server always returns the full current roster (never date-filtered)
         // — anyone removed from the household by another device is simply
         // absent, so purge local rows not in this list instead of leaving a
         // permanent zombie member in pickers.
-        await memberRepo
-            .deleteAllExcept(members.map((m) => _toInt(m['id'])).toList());
+        await memberRepo.deleteAllExcept(
+          members.map((m) => _toInt(m['id'])).toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] member upsert error: $e');
       }
@@ -323,8 +347,10 @@ class SyncService {
     if (data['wallets'] != null) {
       try {
         final wallets = (data['wallets'] as List).cast<Map<String, dynamic>>();
-        await walletRepo.upsertAll(wallets
-            .map((w) => WalletsCompanion(
+        await walletRepo.upsertAll(
+          wallets
+              .map(
+                (w) => WalletsCompanion(
                   id: Value(_toInt(w['id'])),
                   scope: Value((w['scope'] as String?) ?? 'household'),
                   ownerUserId: Value(w['owner_user_id'] as int?),
@@ -334,8 +360,10 @@ class SyncService {
                   initialBalance: Value(_toInt(w['initial_balance'])),
                   currentBalance: Value(_toInt(w['current_balance'])),
                   deleted: Value((w['deleted'] as bool?) ?? false),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] wallet upsert error: $e');
       }
@@ -345,8 +373,10 @@ class SyncService {
     if (data['categories'] != null) {
       try {
         final cats = (data['categories'] as List).cast<Map<String, dynamic>>();
-        await categoryRepo.upsertAll(cats
-            .map((c) => CategoriesCompanion(
+        await categoryRepo.upsertAll(
+          cats
+              .map(
+                (c) => CategoriesCompanion(
                   id: Value(_toInt(c['id'])),
                   name: Value((c['name'] as String?) ?? ''),
                   type: Value((c['type'] as String?) ?? 'expense'),
@@ -354,8 +384,10 @@ class SyncService {
                   hue: Value(_toInt(c['hue'])),
                   parentId: Value(c['parent_id'] as int?),
                   deleted: Value((c['deleted'] as bool?) ?? false),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] category upsert error: $e');
       }
@@ -367,25 +399,38 @@ class SyncService {
         final txs = (data['transactions'] as List).cast<Map<String, dynamic>>();
         for (final t in txs) {
           try {
-            await txRepo.upsertFromServer(TransactionsCompanion(
-              clientId: Value((t['client_id'] as String?) ?? ''),
-              serverId: Value(t['id'] as int?),
-              type: Value((t['type'] as String?) ?? 'expense'),
-              walletId: Value(_toInt(t['wallet_id'])),
-              targetWalletId: Value(t['target_wallet_id'] as int?),
-              categoryId: Value(t['category_id'] as int?),
-              amount: Value(_toInt(t['amount'])),
-              date: Value(DateTime.parse((t['date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
-              note: Value(t['note'] as String?),
-              recordedBy: Value(_toInt(t['recorded_by'])),
-              spentBy: Value(t['spent_by'] as int?),
-              receiptPath: Value(t['receipt_path'] as String?),
-              updatedAt: Value(DateTime.parse((t['updated_at'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
-              deleted: Value((t['deleted'] as bool?) ?? false),
-              pendingSync: const Value(false),
-            ));
+            await txRepo.upsertFromServer(
+              TransactionsCompanion(
+                clientId: Value((t['client_id'] as String?) ?? ''),
+                serverId: Value(t['id'] as int?),
+                type: Value((t['type'] as String?) ?? 'expense'),
+                walletId: Value(_toInt(t['wallet_id'])),
+                targetWalletId: Value(t['target_wallet_id'] as int?),
+                categoryId: Value(t['category_id'] as int?),
+                amount: Value(_toInt(t['amount'])),
+                date: Value(
+                  DateTime.parse(
+                    (t['date'] as String?) ?? DateTime.now().toIso8601String(),
+                  ).toLocal(),
+                ),
+                note: Value(t['note'] as String?),
+                recordedBy: Value(_toInt(t['recorded_by'])),
+                spentBy: Value(t['spent_by'] as int?),
+                receiptPath: Value(t['receipt_path'] as String?),
+                updatedAt: Value(
+                  DateTime.parse(
+                    (t['updated_at'] as String?) ??
+                        DateTime.now().toIso8601String(),
+                  ).toLocal(),
+                ),
+                deleted: Value((t['deleted'] as bool?) ?? false),
+                pendingSync: const Value(false),
+              ),
+            );
           } catch (e) {
-            if (kDebugMode) print('[Sync] transaction upsert error (id=${t['id']}): $e');
+            if (kDebugMode) {
+              print('[Sync] transaction upsert error (id=${t['id']}): $e');
+            }
           }
         }
       } catch (e) {
@@ -397,18 +442,23 @@ class SyncService {
     if (data['budgets'] != null) {
       try {
         final budgets = (data['budgets'] as List).cast<Map<String, dynamic>>();
-        await budgetRepo.upsertAll(budgets
-            .map((b) => BudgetsCompanion(
+        await budgetRepo.upsertAll(
+          budgets
+              .map(
+                (b) => BudgetsCompanion(
                   id: Value(_toInt(b['id'])),
                   scope: Value((b['scope'] as String?) ?? 'household'),
                   ownerUserId: Value(b['owner_user_id'] as int?),
                   categoryId: Value(_toInt(b['category_id'])),
                   amount: Value(_toInt(b['amount'])),
                   periodMonth: Value((b['period_month'] as String?) ?? ''),
+                  deleted: Value((b['deleted'] as bool?) ?? false),
                   pendingSync: const Value(false),
                   everSynced: const Value(true),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] budget upsert error: $e');
       }
@@ -417,27 +467,33 @@ class SyncService {
     // SavingsGoals
     if (data['savings_goals'] != null) {
       try {
-        final goals =
-            (data['savings_goals'] as List).cast<Map<String, dynamic>>();
-        await goalRepo.upsertAll(goals
-            .map((g) => SavingsGoalsCompanion(
+        final goals = (data['savings_goals'] as List)
+            .cast<Map<String, dynamic>>();
+        await goalRepo.upsertAll(
+          goals
+              .map(
+                (g) => SavingsGoalsCompanion(
                   id: Value(_toInt(g['id'])),
                   scope: Value((g['scope'] as String?) ?? 'household'),
                   ownerUserId: Value(g['owner_user_id'] as int?),
                   name: Value((g['name'] as String?) ?? ''),
                   targetAmount: Value(_toInt(g['target_amount'])),
                   currentAmount: Value(_toInt(g['current_amount'])),
-                  targetDate: Value(g['target_date'] != null
-                      ? DateTime.parse(g['target_date'] as String).toLocal()
-                      : null),
+                  targetDate: Value(
+                    g['target_date'] != null
+                        ? DateTime.parse(g['target_date'] as String).toLocal()
+                        : null,
+                  ),
                   walletId: Value(_toInt(g['wallet_id'])),
                   icon: Value((g['icon'] as String?) ?? ''),
                   hue: Value(_toInt(g['hue'])),
                   deleted: Value((g['deleted'] as bool?) ?? false),
                   pendingSync: const Value(false),
                   everSynced: const Value(true),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] savings_goal upsert error: $e');
       }
@@ -447,26 +503,37 @@ class SyncService {
     if (data['debts'] != null) {
       try {
         final debts = (data['debts'] as List).cast<Map<String, dynamic>>();
-        await debtRepo.upsertAll(debts
-            .map((d) => DebtsCompanion(
+        await debtRepo.upsertAll(
+          debts
+              .map(
+                (d) => DebtsCompanion(
                   id: Value(_toInt(d['id'])),
                   ownerUserId: Value(d['owner_user_id'] as int?),
                   type: Value((d['type'] as String?) ?? 'receivable'),
                   partyName: Value((d['party_name'] as String?) ?? ''),
                   amount: Value(_toInt(d['amount'])),
                   paid: Value(_toInt(d['paid'])),
-                  date: Value(DateTime.parse((d['date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
-                  dueDate: Value(d['due_date'] != null
-                      ? DateTime.parse(d['due_date'] as String).toLocal()
-                      : null),
+                  date: Value(
+                    DateTime.parse(
+                      (d['date'] as String?) ??
+                          DateTime.now().toIso8601String(),
+                    ).toLocal(),
+                  ),
+                  dueDate: Value(
+                    d['due_date'] != null
+                        ? DateTime.parse(d['due_date'] as String).toLocal()
+                        : null,
+                  ),
                   status: Value((d['status'] as String?) ?? 'ongoing'),
                   note: Value(d['note'] as String?),
                   walletId: Value(d['wallet_id'] as int?),
                   deleted: Value((d['deleted'] as bool?) ?? false),
                   pendingSync: const Value(false),
                   everSynced: const Value(true),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] debt upsert error: $e');
       }
@@ -476,25 +543,44 @@ class SyncService {
     if (data['recurrings'] != null) {
       try {
         final recs = (data['recurrings'] as List).cast<Map<String, dynamic>>();
-        await recurringRepo.upsertAll(recs
-            .map((r) => RecurringsCompanion(
+        final deletedIds = recs
+            .where((r) => r['deleted'] == true)
+            .map((r) => _toInt(r['id']))
+            .toList();
+        for (final id in deletedIds) {
+          await recurringRepo.deleteById(id);
+        }
+        await recurringRepo.upsertAll(
+          recs
+              .where((r) => r['deleted'] != true)
+              .map(
+                (r) => RecurringsCompanion(
                   id: Value(_toInt(r['id'])),
                   type: Value((r['type'] as String?) ?? 'expense'),
                   walletId: Value(_toInt(r['wallet_id'])),
                   categoryId: Value(_toInt(r['category_id'])),
                   amount: Value(_toInt(r['amount'])),
                   freq: Value((r['freq'] as String?) ?? 'monthly'),
-                  nextRunDate: Value(DateTime.parse((r['next_run_date'] as String?) ?? DateTime.now().toIso8601String()).toLocal()),
-                  endDate: Value(r['end_date'] != null
-                      ? DateTime.parse(r['end_date'] as String).toLocal()
-                      : null),
+                  nextRunDate: Value(
+                    DateTime.parse(
+                      (r['next_run_date'] as String?) ??
+                          DateTime.now().toIso8601String(),
+                    ).toLocal(),
+                  ),
+                  endDate: Value(
+                    r['end_date'] != null
+                        ? DateTime.parse(r['end_date'] as String).toLocal()
+                        : null,
+                  ),
                   autoCreate: Value((r['auto_create'] as bool?) ?? false),
                   note: Value(r['note'] as String?),
                   createdBy: Value(_toInt(r['created_by'])),
                   pendingSync: const Value(false),
                   everSynced: const Value(true),
-                ))
-            .toList());
+                ),
+              )
+              .toList(),
+        );
       } catch (e) {
         if (kDebugMode) print('[Sync] recurring upsert error: $e');
       }

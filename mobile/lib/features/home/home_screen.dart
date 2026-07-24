@@ -25,7 +25,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -52,17 +53,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final userIdAsync = ref.watch(currentUserIdProvider);
     final userId = userIdAsync.value ?? 1;
 
-    // Trigger background sync on mount + foreground resume
-    ref.watch(backgroundSyncProvider);
+    // Trigger background sync on mount + foreground resume and keep failures
+    // visible so users know their financial data is still only local.
+    final backgroundSync = ref.watch(backgroundSyncProvider);
 
     return Scaffold(
       backgroundColor: colors.appBg,
       body: CustomScrollView(
         slivers: [
           // Emerald gradient header
-          SliverToBoxAdapter(
-            child: _HomeHeader(userId: userId),
-          ),
+          SliverToBoxAdapter(child: _HomeHeader(userId: userId)),
+          if (backgroundSync.hasError)
+            SliverToBoxAdapter(
+              child: _SyncWarningBanner(
+                onRetry: () => ref.invalidate(backgroundSyncProvider),
+              ),
+            ),
           // Body sections
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
@@ -96,6 +102,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 }
 
+class _SyncWarningBanner extends StatelessWidget {
+  const _SyncWarningBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Semantics(
+      liveRegion: true,
+      label: 'Data belum tersinkron ke server',
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: colors.expenseTint,
+          borderRadius: AppRadius.borderRadiusBase,
+          border: Border.all(color: colors.expense.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off_rounded, color: colors.expense, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Data tersimpan di HP, tetapi belum tersinkron.',
+                style: AppText.label(color: colors.text),
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------
@@ -113,9 +156,9 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
   Widget build(BuildContext context) {
     final members = ref.watch(membersProvider).value ?? [];
     final member = members.cast<Member?>().firstWhere(
-          (m) => m?.id == widget.userId,
-          orElse: () => members.isNotEmpty ? members.first : null,
-        );
+      (m) => m?.id == widget.userId,
+      orElse: () => members.isNotEmpty ? members.first : null,
+    );
 
     final totalWealth = ref.watch(totalWealthProvider);
     final myBalance = ref.watch(myBalanceProvider(widget.userId));
@@ -222,7 +265,10 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
                       GestureDetector(
                         onTap: () async {
                           final sessionRepo = ref.read(sessionRepoProvider);
-                          await sessionRepo.set('balanceHidden', (!hidden).toString());
+                          await sessionRepo.set(
+                            'balanceHidden',
+                            (!hidden).toString(),
+                          );
                         },
                         child: Icon(
                           hidden
@@ -255,7 +301,9 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white.withValues(alpha: 0.82),
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                               TextSpan(
@@ -265,7 +313,9 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   letterSpacing: -0.03 * 40,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ],
@@ -298,8 +348,9 @@ class _HomeHeaderState extends ConsumerState<_HomeHeader> {
                   // Income/expense this month
                   Consumer(
                     builder: (context, ref, _) {
-                      final monthlyAsync =
-                          ref.watch(monthlyIncomeExpenseProvider);
+                      final monthlyAsync = ref.watch(
+                        monthlyIncomeExpenseProvider,
+                      );
                       final income = monthlyAsync.value?.income ?? 0;
                       final expense = monthlyAsync.value?.expense ?? 0;
                       return Row(
@@ -360,8 +411,11 @@ class _BellButton extends ConsumerWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.notifications_outlined,
-                color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           if (unreadCount > 0)
             Positioned(
@@ -434,12 +488,15 @@ class _GlassCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           hidden
-              ? Text('••••••',
+              ? Text(
+                  '••••••',
                   style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 2))
+                    fontSize: 18.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                  ),
+                )
               : Text(
                   fmtRp(amount),
                   style: GoogleFonts.plusJakartaSans(
@@ -497,11 +554,15 @@ class _BudgetCard extends ConsumerWidget {
                     Text(
                       '$pct% terpakai',
                       style: AppText.label(
-                          color: isOver ? colors.expense : colors.text2),
+                        color: isOver ? colors.expense : colors.text2,
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.chevron_right_rounded,
-                        color: colors.text3, size: 18),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: colors.text3,
+                      size: 18,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -517,7 +578,9 @@ class _BudgetCard extends ConsumerWidget {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: colors.text,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                             TextSpan(
@@ -526,7 +589,9 @@ class _BudgetCard extends ConsumerWidget {
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
                                 color: isOver ? colors.expense : colors.text,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                                 letterSpacing: -0.5,
                               ),
                             ),
@@ -551,7 +616,10 @@ class _BudgetCard extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const SizedBox(height: 60, child: Center(child: CircularProgressIndicator())),
+          loading: () => const SizedBox(
+            height: 60,
+            child: Center(child: CircularProgressIndicator()),
+          ),
           error: (e, _) => const SizedBox.shrink(),
         ),
       ),
@@ -570,38 +638,78 @@ class _ActionGrid extends ConsumerWidget {
 
     final items = <_GridItem>[
       // Row 1 — quick actions (primary tint bg)
-      _GridItem(icon: Icons.group_outlined, label: 'Isi Kas\nBersama', primary: true,
-          onTap: () => context.push('/add-transaction?preset=topup-shared')),
-      _GridItem(icon: Icons.swap_horiz_rounded, label: 'Transfer', primary: true,
-          onTap: () => context.push('/add-transaction?preset=transfer')),
-      _GridItem(icon: Icons.arrow_upward_rounded, label: 'Pemasukan', primary: true,
-          onTap: () => context.push('/add-transaction?preset=income')),
-      _GridItem(icon: Icons.arrow_downward_rounded, label: 'Pengeluaran', primary: true,
-          onTap: () => context.push('/add-transaction?preset=expense')),
-      _GridItem(icon: Icons.document_scanner_outlined, label: 'Scan\nStruk', primary: true,
-          onTap: () async {
-            final result = await ScanStrukService().scan(context);
-            if (result != null && context.mounted) {
-              final parts = <String>[];
-              if (result.amount != null) parts.add('amount=${result.amount}');
-              if (result.note != null) {
-                parts.add('note=${Uri.encodeQueryComponent(result.note!)}');
-              }
-              final qs = parts.isNotEmpty ? '?${parts.join('&')}' : '';
-              context.push('/add-transaction$qs');
+      _GridItem(
+        icon: Icons.group_outlined,
+        label: 'Isi Kas\nBersama',
+        primary: true,
+        onTap: () => context.push('/add-transaction?preset=topup-shared'),
+      ),
+      _GridItem(
+        icon: Icons.swap_horiz_rounded,
+        label: 'Transfer',
+        primary: true,
+        onTap: () => context.push('/add-transaction?preset=transfer'),
+      ),
+      _GridItem(
+        icon: Icons.arrow_upward_rounded,
+        label: 'Pemasukan',
+        primary: true,
+        onTap: () => context.push('/add-transaction?preset=income'),
+      ),
+      _GridItem(
+        icon: Icons.arrow_downward_rounded,
+        label: 'Pengeluaran',
+        primary: true,
+        onTap: () => context.push('/add-transaction?preset=expense'),
+      ),
+      _GridItem(
+        icon: Icons.document_scanner_outlined,
+        label: 'Scan\nStruk',
+        primary: true,
+        onTap: () async {
+          final result = await ScanStrukService().scan(context);
+          if (result != null && context.mounted) {
+            final parts = <String>[];
+            if (result.amount != null) parts.add('amount=${result.amount}');
+            if (result.note != null) {
+              parts.add('note=${Uri.encodeQueryComponent(result.note!)}');
             }
-          }),
+            final qs = parts.isNotEmpty ? '?${parts.join('&')}' : '';
+            context.push('/add-transaction$qs');
+          }
+        },
+      ),
       // Row 2 — feature hubs (surface bg)
-      _GridItem(icon: Icons.tune_rounded, label: 'Anggaran', primary: false,
-          onTap: () => context.push('/budget')),
-      _GridItem(icon: Icons.flag_circle_outlined, label: 'Tujuan', primary: false,
-          onTap: () => context.push('/goals')),
-      _GridItem(icon: Icons.account_balance_outlined, label: 'Utang', primary: false,
-          onTap: () => context.push('/debts')),
-      _GridItem(icon: Icons.autorenew_rounded, label: 'Berulang', primary: false,
-          onTap: () => context.push('/recurring')),
-      _GridItem(icon: Icons.bar_chart_rounded, label: 'Laporan', primary: false,
-          onTap: () => context.push('/reports')),
+      _GridItem(
+        icon: Icons.tune_rounded,
+        label: 'Anggaran',
+        primary: false,
+        onTap: () => context.push('/budget'),
+      ),
+      _GridItem(
+        icon: Icons.flag_circle_outlined,
+        label: 'Tujuan',
+        primary: false,
+        onTap: () => context.push('/goals'),
+      ),
+      _GridItem(
+        icon: Icons.account_balance_outlined,
+        label: 'Utang',
+        primary: false,
+        onTap: () => context.push('/debts'),
+      ),
+      _GridItem(
+        icon: Icons.autorenew_rounded,
+        label: 'Berulang',
+        primary: false,
+        onTap: () => context.push('/recurring'),
+      ),
+      _GridItem(
+        icon: Icons.bar_chart_rounded,
+        label: 'Laporan',
+        primary: false,
+        onTap: () => context.push('/reports'),
+      ),
     ];
 
     return GridView.count(
@@ -623,19 +731,26 @@ class _ActionGrid extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: item.primary ? colors.primaryTint : colors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: item.primary ? null : Border.all(color: colors.border),
+                  border: item.primary
+                      ? null
+                      : Border.all(color: colors.border),
                   boxShadow: item.primary ? null : AppShadows.sm,
                 ),
-                child: Icon(item.icon,
-                    color: item.primary ? colors.primary : colors.text2,
-                    size: 22),
+                child: Icon(
+                  item.icon,
+                  color: item.primary ? colors.primary : colors.text2,
+                  size: 22,
+                ),
               ),
               const SizedBox(height: 5),
-              Text(item.label,
-                  style: AppText.label(color: colors.text2)
-                      .copyWith(fontSize: 10.5, height: 1.3),
-                  textAlign: TextAlign.center,
-                  maxLines: 2),
+              Text(
+                item.label,
+                style: AppText.label(
+                  color: colors.text2,
+                ).copyWith(fontSize: 10.5, height: 1.3),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+              ),
             ],
           ),
         );
@@ -645,75 +760,16 @@ class _ActionGrid extends ConsumerWidget {
 }
 
 class _GridItem {
-  const _GridItem({required this.icon, required this.label, required this.primary, required this.onTap});
+  const _GridItem({
+    required this.icon,
+    required this.label,
+    required this.primary,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final bool primary;
   final VoidCallback onTap;
-}
-
-class _ActionItem {
-  const _ActionItem({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-}
-
-// ---------------------------------------------------------------------------
-// Feature hub
-// ---------------------------------------------------------------------------
-
-class _FeatureHub extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.appColors;
-
-    final hubs = [
-      _HubItem(icon: Icons.tune_rounded, label: 'Anggaran', route: '/budget'),
-      _HubItem(icon: Icons.flag_circle_outlined, label: 'Tujuan', route: '/goals'),
-      _HubItem(icon: Icons.account_balance_outlined, label: 'Utang', route: '/debts'),
-      _HubItem(icon: Icons.autorenew_rounded, label: 'Berulang', route: '/recurring'),
-      _HubItem(icon: Icons.bar_chart_rounded, label: 'Laporan', route: '/reports'),
-    ];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: hubs.map((hub) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => context.push(hub.route),
-            child: Column(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: colors.border),
-                    boxShadow: AppShadows.sm,
-                  ),
-                  child: Icon(hub.icon, color: colors.text2, size: 22),
-                ),
-                const SizedBox(height: 6),
-                Text(hub.label,
-                    style: AppText.label(color: colors.text2)
-                        .copyWith(fontSize: 11),
-                    textAlign: TextAlign.center),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _HubItem {
-  const _HubItem({required this.icon, required this.label, required this.route});
-  final IconData icon;
-  final String label;
-  final String route;
 }
 
 // ---------------------------------------------------------------------------
@@ -726,10 +782,8 @@ class _TargetDebtCard extends ConsumerWidget {
     final colors = context.appColors;
     final goalsTotal = ref.watch(goalsTotalProvider);
     final goals = ref.watch(goalsProvider).value ?? [];
-    final goalsTarget =
-        goals.fold(0, (sum, g) => sum + g.targetAmount);
-    final goalsFraction =
-        goalsTarget > 0 ? goalsTotal / goalsTarget : 0.0;
+    final goalsTarget = goals.fold(0, (sum, g) => sum + g.targetAmount);
+    final goalsFraction = goalsTarget > 0 ? goalsTotal / goalsTarget : 0.0;
 
     final debtSummary = ref.watch(debtSummaryProvider);
     final hiddenAsync = ref.watch(balanceHiddenProvider);
@@ -763,8 +817,10 @@ class _TargetDebtCard extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Kantong Tujuan',
-                                style: AppText.label(color: colors.text2)),
+                            Text(
+                              'Kantong Tujuan',
+                              style: AppText.label(color: colors.text2),
+                            ),
                             const SizedBox(height: 3),
                             Text(
                               hidden ? '••••••' : fmtShort(goalsTotal),
@@ -772,7 +828,9 @@ class _TargetDebtCard extends ConsumerWidget {
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 color: colors.text,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ],
@@ -794,28 +852,38 @@ class _TargetDebtCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Utang / Piutang',
-                          style: AppText.label(color: colors.text2)),
+                      Text(
+                        'Utang / Piutang',
+                        style: AppText.label(color: colors.text2),
+                      ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           Text(
-                            hidden ? '••••••' : '−${fmtShort(debtSummary.payable)}',
+                            hidden
+                                ? '••••••'
+                                : '−${fmtShort(debtSummary.payable)}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: colors.expense,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            hidden ? '••••••' : '+${fmtShort(debtSummary.receivable)}',
+                            hidden
+                                ? '••••••'
+                                : '+${fmtShort(debtSummary.receivable)}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: colors.income,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ],
@@ -856,13 +924,17 @@ class _RecentTransactions extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Transaksi Terbaru',
-                  style: AppText.sectionTitle(color: colors.text)),
+              child: Text(
+                'Transaksi Terbaru',
+                style: AppText.sectionTitle(color: colors.text),
+              ),
             ),
             GestureDetector(
               onTap: () => context.go('/transactions'),
-              child: Text('Lihat semua',
-                  style: AppText.label(color: colors.primary)),
+              child: Text(
+                'Lihat semua',
+                style: AppText.label(color: colors.primary),
+              ),
             ),
           ],
         ),
@@ -888,24 +960,24 @@ class _RecentTransactions extends ConsumerWidget {
                   children: txList.asMap().entries.map((entry) {
                     final tx = entry.value as Transaction;
                     final recorder = members.cast<Member?>().firstWhere(
-                          (m) => m?.id == tx.recordedBy,
-                          orElse: () => null,
-                        );
+                      (m) => m?.id == tx.recordedBy,
+                      orElse: () => null,
+                    );
                     final spentBy = tx.spentBy != null
                         ? members.cast<Member?>().firstWhere(
-                              (m) => m?.id == tx.spentBy,
-                              orElse: () => null,
-                            )
+                            (m) => m?.id == tx.spentBy,
+                            orElse: () => null,
+                          )
                         : null;
                     final wallet = wallets.cast<Wallet?>().firstWhere(
-                          (w) => w?.id == tx.walletId,
-                          orElse: () => null,
-                        );
+                      (w) => w?.id == tx.walletId,
+                      orElse: () => null,
+                    );
                     final category = tx.categoryId != null
                         ? categories.cast<Category?>().firstWhere(
-                              (c) => c?.id == tx.categoryId,
-                              orElse: () => null,
-                            )
+                            (c) => c?.id == tx.categoryId,
+                            orElse: () => null,
+                          )
                         : null;
 
                     final catName = category?.name ?? _typeLabel(tx.type);
@@ -919,8 +991,9 @@ class _RecentTransactions extends ConsumerWidget {
                           categoryName: catName,
                           categoryIconKey: catIconKey,
                           categoryHue: catHue,
-                          recorderInitial:
-                              recorder?.name.isNotEmpty == true ? recorder!.name[0] : '?',
+                          recorderInitial: recorder?.name.isNotEmpty == true
+                              ? recorder!.name[0]
+                              : '?',
                           recorderHue: recorder?.avatarHue ?? 162,
                           title: catName,
                           walletName: wallet?.name ?? 'Dompet',
@@ -943,18 +1016,25 @@ class _RecentTransactions extends ConsumerWidget {
 
   String _typeLabel(String type) {
     switch (type) {
-      case 'income': return 'Pemasukan';
-      case 'expense': return 'Pengeluaran';
-      case 'transfer': return 'Transfer';
-      default: return 'Penyesuaian';
+      case 'income':
+        return 'Pemasukan';
+      case 'expense':
+        return 'Pengeluaran';
+      case 'transfer':
+        return 'Transfer';
+      default:
+        return 'Penyesuaian';
     }
   }
 
   String _typeIconKey(String type) {
     switch (type) {
-      case 'income': return 'briefcase';
-      case 'transfer': return 'signal';
-      default: return 'dots';
+      case 'income':
+        return 'briefcase';
+      case 'transfer':
+        return 'signal';
+      default:
+        return 'dots';
     }
   }
 }

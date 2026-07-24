@@ -2,10 +2,10 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BudgetController;
-use App\Http\Controllers\Api\DownloadController;
-use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DebtController;
+use App\Http\Controllers\Api\DownloadController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RecurringController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SavingsGoalController;
@@ -23,11 +23,11 @@ Route::get('download/apk', [DownloadController::class, 'apk']);
 
 // Public auth routes
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('join', [AuthController::class, 'join']);
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:20,1');
+    Route::post('join', [AuthController::class, 'join'])->middleware('throttle:20,1');
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 });
 
 // Protected routes
@@ -39,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('me', [AuthController::class, 'updateMe']);
     Route::post('me/avatar', [AuthController::class, 'uploadAvatar']);
     Route::put('me/pin', [AuthController::class, 'updatePin']);
-    Route::post('me/pin/verify', [AuthController::class, 'verifyPin']);
+    Route::post('me/pin/verify', [AuthController::class, 'verifyPin'])->middleware('throttle:10,1');
 
     // Resources
     Route::apiResource('wallets', WalletController::class);

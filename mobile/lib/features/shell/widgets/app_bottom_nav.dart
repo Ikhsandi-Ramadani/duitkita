@@ -18,10 +18,26 @@ class AppBottomNav extends StatelessWidget {
   final VoidCallback onAddTap;
 
   static const _navItems = [
-    _NavItem(label: 'Beranda', icon: Icons.home_outlined, activeIcon: Icons.home),
-    _NavItem(label: 'Transaksi', icon: Icons.swap_horiz_outlined, activeIcon: Icons.swap_horiz),
-    _NavItem(label: 'Dompet', icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet),
-    _NavItem(label: 'Profil', icon: Icons.person_outline, activeIcon: Icons.person),
+    _NavItem(
+      label: 'Beranda',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+    ),
+    _NavItem(
+      label: 'Transaksi',
+      icon: Icons.swap_horiz_outlined,
+      activeIcon: Icons.swap_horiz,
+    ),
+    _NavItem(
+      label: 'Dompet',
+      icon: Icons.account_balance_wallet_outlined,
+      activeIcon: Icons.account_balance_wallet,
+    ),
+    _NavItem(
+      label: 'Profil',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+    ),
   ];
 
   @override
@@ -32,9 +48,7 @@ class AppBottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        border: Border(
-          top: BorderSide(color: colors.border, width: 1),
-        ),
+        border: Border(top: BorderSide(color: colors.border, width: 1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0D000000),
@@ -113,25 +127,30 @@ class _NavButton extends StatelessWidget {
     final colors = context.appColors;
     final color = isActive ? colors.primary : colors.text3;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isActive ? item.activeIcon : item.icon,
-            color: color,
-            size: 22,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: AppText.micro(color: color).copyWith(
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: item.label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isActive ? item.activeIcon : item.icon,
+              color: color,
+              size: 22,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              item.label,
+              style: AppText.micro(color: color).copyWith(
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,21 +164,21 @@ class _FabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 60,
-        height: 60,
-        margin: const EdgeInsets.only(bottom: 22),
-        decoration: BoxDecoration(
-          color: colors.primary,
-          borderRadius: AppRadius.borderRadiusBase,
-          boxShadow: AppShadows.primaryShadow,
-        ),
-        child: Icon(
-          Icons.add,
-          color: colors.onPrimary,
-          size: 28,
+    return Semantics(
+      button: true,
+      label: 'Tambah transaksi',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 60,
+          height: 60,
+          margin: const EdgeInsets.only(bottom: 22),
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: AppRadius.borderRadiusBase,
+            boxShadow: AppShadows.primaryShadow,
+          ),
+          child: Icon(Icons.add, color: colors.onPrimary, size: 28),
         ),
       ),
     );

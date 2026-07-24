@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -30,17 +31,17 @@ class AuthController extends Controller
         $inviteCode = $this->generateUniqueInviteCode();
 
         $household = Household::create([
-            'name'        => $request->family_name,
+            'name' => $request->family_name,
             'invite_code' => $inviteCode,
         ]);
 
         $user = User::create([
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
-            'password'     => $request->password,
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => $request->password,
             'household_id' => $household->id,
-            'role'         => 'owner',
+            'role' => 'owner',
         ]);
 
         $household->update(['owner_id' => $user->id]);
@@ -48,8 +49,8 @@ class AuthController extends Controller
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
-            'token'     => $token,
-            'user'      => new UserResource($user),
+            'token' => $token,
+            'user' => new UserResource($user),
             'household' => new HouseholdResource($household->load('members')),
         ], 201);
     }
@@ -59,12 +60,12 @@ class AuthController extends Controller
         $household = Household::where('invite_code', strtoupper($request->invite_code))->firstOrFail();
 
         $user = User::create([
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
-            'password'     => $request->password,
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => $request->password,
             'household_id' => $household->id,
-            'role'         => 'member',
+            'role' => 'member',
         ]);
 
         $token = $user->createToken('mobile')->plainTextToken;
@@ -73,13 +74,13 @@ class AuthController extends Controller
             $household->id,
             'member_join',
             'Anggota Baru',
-            $user->name . ' bergabung ke keluarga',
+            $user->name.' bergabung ke keluarga',
             ['user_id' => $user->id],
         );
 
         return response()->json([
-            'token'     => $token,
-            'user'      => new UserResource($user),
+            'token' => $token,
+            'user' => new UserResource($user),
             'household' => new HouseholdResource($household->load('members')),
         ], 201);
     }
@@ -87,13 +88,13 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $identifier = $request->identifier;
-        $isEmail    = str_contains($identifier, '@');
+        $isEmail = str_contains($identifier, '@');
 
         $user = $isEmail
             ? User::where('email', $identifier)->first()
             : User::where('phone', $identifier)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'identifier' => ['The provided credentials are incorrect.'],
             ]);
@@ -103,7 +104,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user'  => new UserResource($user),
+            'user' => new UserResource($user),
         ]);
     }
 
@@ -114,49 +115,70 @@ class AuthController extends Controller
         ]);
 
         $identifier = $request->identifier;
-        $isEmail    = str_contains($identifier, '@');
+        $isEmail = str_contains($identifier, '@');
 
         $user = $isEmail
             ? User::where('email', $identifier)->first()
             : User::where('phone', $identifier)->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
+        if (! $user) {
+            return response()->json([
+                'message' => 'Jika akun ditemukan, kode reset akan dikirim.',
+            ]);
         }
 
-        $otp      = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $cacheKey = 'otp_reset_' . $user->id;
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $cacheKey = 'otp_reset_'.$user->id;
 
         Cache::put($cacheKey, $otp, now()->addMinutes(10));
 
-        // DEV MODE: OTP returned in response. Replace with mail/SMS in production.
-        return response()->json([
-            'message' => 'Kode reset dikirim',
-            'otp'     => $otp,
-        ]);
+        if (config('app.debug')) {
+            return response()->json([
+                'message' => 'Kode reset dikirim',
+                'otp' => $otp,
+            ]);
+        }
+
+        try {
+            Mail::raw(
+                "Kode OTP DuitKita kamu adalah {$otp}. Kode berlaku selama 10 menit.",
+                fn ($message) => $message
+                    ->to($user->email)
+                    ->subject('Kode reset password DuitKita')
+            );
+        } catch (\Throwable $e) {
+            Cache::forget($cacheKey);
+            report($e);
+
+            return response()->json([
+                'message' => 'Kode reset belum dapat dikirim. Coba lagi nanti.',
+            ], 503);
+        }
+
+        return response()->json(['message' => 'Kode reset dikirim']);
     }
 
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'identifier'            => ['required', 'string'],
-            'otp'                   => ['required', 'string', 'size:6'],
-            'password'              => ['required', 'string', 'min:8', 'confirmed'],
+            'identifier' => ['required', 'string'],
+            'otp' => ['required', 'string', 'size:6'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $identifier = $request->identifier;
-        $isEmail    = str_contains($identifier, '@');
+        $isEmail = str_contains($identifier, '@');
 
         $user = $isEmail
             ? User::where('email', $identifier)->first()
             : User::where('phone', $identifier)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
         }
 
-        $cacheKey   = 'otp_reset_' . $user->id;
-        $storedOtp  = Cache::get($cacheKey);
+        $cacheKey = 'otp_reset_'.$user->id;
+        $storedOtp = Cache::get($cacheKey);
 
         if ($storedOtp === null || $storedOtp !== $request->otp) {
             return response()->json(['message' => 'Kode OTP tidak valid atau sudah kadaluarsa.'], 422);
@@ -178,13 +200,13 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user      = $request->user()->load('household.members');
+        $user = $request->user()->load('household.members');
         $household = $user->household;
 
         return response()->json([
-            'user'      => new UserResource($user),
+            'user' => new UserResource($user),
             'household' => new HouseholdResource($household),
-            'members'   => UserResource::collection($household->members),
+            'members' => UserResource::collection($household->members),
         ]);
     }
 
@@ -218,7 +240,7 @@ class AuthController extends Controller
         }
 
         $path = $request->file('avatar')->store('avatars', 'public');
-        $user->update(['avatar_path' => '/storage/' . $path]);
+        $user->update(['avatar_path' => '/storage/'.$path]);
 
         return response()->json([
             'avatar_path' => $user->avatar_path,
@@ -236,8 +258,8 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
-            return response()->json(['message' => 'Invalid PIN.'], 401);
+        if (! $user->pin || ! Hash::check($request->pin, $user->pin)) {
+            return response()->json(['message' => 'Invalid PIN.'], 422);
         }
 
         return response()->json(['verified' => true]);
@@ -261,14 +283,14 @@ class AuthController extends Controller
             ->where('household_id', $householdId)
             ->first();
 
-        if (!$target) {
+        if (! $target) {
             return response()->json(['message' => 'Anggota tidak ditemukan dalam household ini.'], 404);
         }
 
         DB::transaction(function () use ($target) {
             $target->update([
                 'household_id' => null,
-                'role'         => 'member',
+                'role' => 'member',
             ]);
             // Without this the removed member keeps a live session and can
             // keep hitting every authenticated endpoint as if nothing happened.

@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Recurring extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'household_id',
         'type',
@@ -25,11 +28,11 @@ class Recurring extends Model
     protected function casts(): array
     {
         return [
-            'amount'        => 'integer',
+            'amount' => 'integer',
             'next_run_date' => 'date',
-            'end_date'      => 'date',
+            'end_date' => 'date',
             // When true, the scheduler auto-generates a transaction on next_run_date
-            'auto_create'   => 'boolean',
+            'auto_create' => 'boolean',
         ];
     }
 
