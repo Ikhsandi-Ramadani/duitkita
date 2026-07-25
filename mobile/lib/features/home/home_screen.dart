@@ -77,27 +77,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               delegate: SliverChildListDelegate([
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 60),
-                  child: _BudgetCard(),
+                  child: _ActionGrid(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 120),
-                  child: _AttentionCard(),
+                  child: _BudgetCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 160),
-                  child: _UpcomingBillsCard(),
+                  child: _AttentionCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 200),
-                  child: _CategoryExpensesCard(),
+                  child: _UpcomingBillsCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 240),
-                  child: _ActionGrid(),
+                  child: _CategoryExpensesCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
@@ -794,10 +794,7 @@ class _AttentionRow extends StatelessWidget {
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    item.detail,
-                    style: AppText.micro(color: colors.text3),
-                  ),
+                  Text(item.detail, style: AppText.micro(color: colors.text3)),
                 ],
               ),
             ),
@@ -955,7 +952,10 @@ class _UpcomingBillRow extends StatelessWidget {
                     ),
                     if (bill.autoCreate) ...[
                       const SizedBox(width: 6),
-                      Text('• Otomatis', style: AppText.micro(color: colors.primary)),
+                      Text(
+                        '• Otomatis',
+                        style: AppText.micro(color: colors.primary),
+                      ),
                     ],
                   ],
                 ),
