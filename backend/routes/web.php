@@ -11,7 +11,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WalletController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect('/admin/login'));
+Route::get('/', fn () => auth()->check()
+    ? redirect()->route('admin.dashboard')
+    : redirect()->route('admin.login'));
 
 Route::prefix('admin')->name('admin.')->group(function () {
     // Guest only
