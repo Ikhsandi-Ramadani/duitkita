@@ -72,13 +72,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: colors.onPrimary.withValues(alpha: 0.15),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Icon(
-                    Icons.account_balance_wallet_rounded,
-                    size: 48,
-                    color: colors.onPrimary,
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(
+                    'assets/branding/duitkita-mark-transparent-1024.png',
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo DuitKita',
                   ),
                 ),
                 const SizedBox(height: 20),

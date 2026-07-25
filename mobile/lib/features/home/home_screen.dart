@@ -11,6 +11,7 @@ import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
 import '../../ui/widgets/member_avatar.dart';
 import '../../ui/widgets/app_progress_bar.dart';
+import '../../ui/widgets/cat_icon.dart';
 import '../../ui/widgets/progress_ring_small.dart';
 import '../../ui/widgets/tx_row.dart';
 import '../scan_struk/scan_struk_service.dart';
@@ -81,16 +82,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 120),
-                  child: _ActionGrid(),
+                  child: _AttentionCard(),
+                ),
+                const SizedBox(height: 20),
+                EntranceAnimation(
+                  delay: const Duration(milliseconds: 160),
+                  child: _UpcomingBillsCard(),
+                ),
+                const SizedBox(height: 20),
+                EntranceAnimation(
+                  delay: const Duration(milliseconds: 200),
+                  child: _CategoryExpensesCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
                   delay: const Duration(milliseconds: 240),
+                  child: _ActionGrid(),
+                ),
+                const SizedBox(height: 20),
+                EntranceAnimation(
+                  delay: const Duration(milliseconds: 280),
                   child: _TargetDebtCard(),
                 ),
                 const SizedBox(height: 20),
                 EntranceAnimation(
-                  delay: const Duration(milliseconds: 300),
+                  delay: const Duration(milliseconds: 320),
                   child: _RecentTransactions(userId: userId),
                 ),
               ]),
@@ -622,6 +638,541 @@ class _BudgetCard extends ConsumerWidget {
           ),
           error: (e, _) => const SizedBox.shrink(),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Attention
+// ---------------------------------------------------------------------------
+
+class _AttentionCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final attentionAsync = ref.watch(homeAttentionProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.borderRadiusBase,
+        border: Border.all(color: colors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: colors.expenseTint,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  Icons.notifications_active_outlined,
+                  color: colors.expense,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Perlu Perhatian',
+                  style: AppText.cardTitle(color: colors.text),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          attentionAsync.when(
+            data: (items) {
+              if (items.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 11,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.incomeTint,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: colors.income,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          'Tidak ada anggaran atau utang yang mendesak.',
+                          style: AppText.label(color: colors.text2),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (var index = 0; index < items.length; index++) ...[
+                    _AttentionRow(item: items[index]),
+                    if (index != items.length - 1)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Divider(height: 1, color: colors.border),
+                      ),
+                  ],
+                ],
+              );
+            },
+            loading: () => const SizedBox(
+              height: 48,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, _) => TextButton.icon(
+              onPressed: () => ref.invalidate(homeAttentionProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Muat ulang'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttentionRow extends StatelessWidget {
+  const _AttentionRow({required this.item});
+
+  final HomeAttention item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final isDanger = item.kind == HomeAttentionKind.danger;
+    final color = isDanger ? colors.expense : colors.adjust;
+    final icon = isDanger
+        ? Icons.error_outline_rounded
+        : Icons.warning_amber_rounded;
+
+    return InkWell(
+      onTap: () => context.push(item.route),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: color, size: 19),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.label(
+                      color: colors.text,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.detail,
+                    style: AppText.micro(color: colors.text3),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: colors.text3, size: 19),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Upcoming bills
+// ---------------------------------------------------------------------------
+
+class _UpcomingBillsCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final bills = ref.watch(upcomingBillsProvider);
+    final shownBills = bills.take(3).toList();
+    final total = bills.fold(0, (sum, bill) => sum + bill.amount);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.borderRadiusBase,
+        border: Border.all(color: colors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tagihan Terdekat',
+                      style: AppText.cardTitle(color: colors.text),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      bills.isEmpty
+                          ? 'Tujuh hari ke depan'
+                          : '${bills.length} tagihan · ${fmtRp(total)}',
+                      style: AppText.label(color: colors.text3),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/recurring'),
+                child: Text(bills.isEmpty ? 'Atur' : 'Lihat semua'),
+              ),
+            ],
+          ),
+          if (bills.isEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              decoration: BoxDecoration(
+                color: colors.surface2,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    color: colors.text3,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Belum ada tagihan terjadwal dalam waktu dekat.',
+                      style: AppText.label(color: colors.text2),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            const SizedBox(height: 10),
+            for (var index = 0; index < shownBills.length; index++) ...[
+              _UpcomingBillRow(bill: shownBills[index]),
+              if (index != shownBills.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: colors.border),
+                ),
+            ],
+            if (bills.length > shownBills.length) ...[
+              const SizedBox(height: 10),
+              Text(
+                '+${bills.length - shownBills.length} tagihan lainnya',
+                style: AppText.micro(color: colors.text3),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingBillRow extends StatelessWidget {
+  const _UpcomingBillRow({required this.bill});
+
+  final UpcomingBill bill;
+
+  String _dueLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(date.year, date.month, date.day);
+    final days = due.difference(today).inDays;
+    if (days == 0) return 'Hari ini';
+    if (days == 1) return 'Besok';
+    return DateFormat('EEE, d MMM', 'id_ID').format(date);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return InkWell(
+      onTap: () => context.push('/recurring'),
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        children: [
+          CatIcon(iconKey: bill.icon, hue: bill.hue, size: 40),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bill.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.label(
+                    color: colors.text,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                      _dueLabel(bill.dueDate),
+                      style: AppText.micro(color: colors.text3),
+                    ),
+                    if (bill.autoCreate) ...[
+                      const SizedBox(width: 6),
+                      Text('• Otomatis', style: AppText.micro(color: colors.primary)),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            fmtRp(bill.amount),
+            style: AppText.label(
+              color: colors.expense,
+            ).copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Expense by category
+// ---------------------------------------------------------------------------
+
+class _CategoryExpensesCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final expensesAsync = ref.watch(monthlyCategoryExpensesProvider);
+    final month = DateFormat('MMMM', 'id_ID').format(DateTime.now());
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.borderRadiusBase,
+        border: Border.all(color: colors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pengeluaran per Kategori',
+                      style: AppText.cardTitle(color: colors.text),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Bulan $month',
+                      style: AppText.label(color: colors.text3),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/reports'),
+                child: const Text('Laporan'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          expensesAsync.when(
+            data: (expenses) {
+              if (expenses.isEmpty) {
+                return _CategoryExpensesEmpty(month: month);
+              }
+
+              final total = expenses.fold(0, (sum, item) => sum + item.total);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total ${fmtRp(total)}',
+                    style: AppText.body(
+                      color: colors.text,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 14),
+                  for (var index = 0; index < expenses.length; index++) ...[
+                    _CategoryExpenseRow(
+                      expense: expenses[index],
+                      totalExpense: total,
+                    ),
+                    if (index != expenses.length - 1)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(height: 1, color: colors.border),
+                      ),
+                  ],
+                ],
+              );
+            },
+            loading: () => const SizedBox(
+              height: 88,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, _) => Center(
+              child: TextButton.icon(
+                onPressed: () =>
+                    ref.invalidate(monthlyCategoryExpensesProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Muat ulang kategori'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryExpenseRow extends StatelessWidget {
+  const _CategoryExpenseRow({
+    required this.expense,
+    required this.totalExpense,
+  });
+
+  final CategoryExpenseSummary expense;
+  final int totalExpense;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final fraction = totalExpense > 0 ? expense.total / totalExpense : 0.0;
+    final percentage = (fraction * 100).round();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final categoryColor = isDark
+        ? HSLColor.fromAHSL(1, expense.hue.toDouble(), 0.58, 0.66).toColor()
+        : HSLColor.fromAHSL(1, expense.hue.toDouble(), 0.55, 0.42).toColor();
+
+    return Semantics(
+      label:
+          '${expense.name}, ${fmtRp(expense.total)}, $percentage persen dari pengeluaran bulan ini',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CatIcon(iconKey: expense.icon, hue: expense.hue, size: 42),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        expense.name,
+                        style: AppText.body(
+                          color: colors.text,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      fmtRp(expense.total),
+                      style: AppText.label(
+                        color: colors.text,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                AppProgressBar(
+                  fraction: fraction,
+                  height: 6,
+                  normalColor: categoryColor,
+                  overColor: categoryColor,
+                  trackColor: colors.surface2,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '$percentage% dari total pengeluaran',
+                  style: AppText.label(
+                    color: colors.text3,
+                  ).copyWith(fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryExpensesEmpty extends StatelessWidget {
+  const _CategoryExpensesEmpty({required this.month});
+
+  final String month;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      decoration: BoxDecoration(
+        color: colors.surface2,
+        borderRadius: AppRadius.borderRadiusBase,
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.donut_small_outlined, color: colors.text3, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            'Belum ada pengeluaran di bulan $month',
+            style: AppText.label(color: colors.text2),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

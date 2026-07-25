@@ -51,10 +51,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: colors.primaryTint,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: colors.primary,
-                    size: 28,
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(
+                    'assets/branding/duitkita-mark-transparent-1024.png',
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo DuitKita',
                   ),
                 ),
               ),

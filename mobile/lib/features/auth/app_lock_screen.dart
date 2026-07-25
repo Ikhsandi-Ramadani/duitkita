@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../core/services/biometric_service.dart';
 import '../../data/db/app_database.dart';
 import '../../data/providers.dart';
 import '../../ui/widgets/app_toast.dart';
@@ -21,9 +22,11 @@ class AppLockScreen extends ConsumerStatefulWidget {
 class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   final List<String> _digits = [];
   bool _checking = false;
+  bool _biometricBusy = false;
+  bool _autoBiometricRequested = false;
   bool _loadingPinCheck = true;
   String? _errorMsg;
-  final _localAuth = LocalAuthentication();
+  final _biometrics = BiometricService();
 
   @override
   void initState() {
@@ -49,26 +52,32 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         context.go('/home');
         return;
       }
-      setState(() {
-        _loadingPinCheck = false;
-      });
+      await _showPinEntryAndMaybeAuthenticate();
     } on DioException {
       if (!mounted) return;
       if (localHasPinValue == 'false') {
         context.go('/home');
         return;
       }
-      setState(() {
-        _loadingPinCheck = false;
-      });
+      await _showPinEntryAndMaybeAuthenticate();
     } catch (_) {
       // Any other error — fail closed
-      if (mounted) {
-        setState(() {
-          _loadingPinCheck = false;
-        });
-      }
+      await _showPinEntryAndMaybeAuthenticate();
     }
+  }
+
+  Future<void> _showPinEntryAndMaybeAuthenticate() async {
+    if (!mounted) return;
+    setState(() => _loadingPinCheck = false);
+
+    final enabled =
+        await ref.read(sessionRepoProvider).get('biometricEnabled') == 'true';
+    if (!mounted || !enabled || _autoBiometricRequested) return;
+
+    _autoBiometricRequested = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onBiometric();
+    });
   }
 
   @override
@@ -128,7 +137,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                       _Keypad(
                         onDigit: _onDigit,
                         onBackspace: _onBackspace,
-                        onBiometric: biometricEnabled ? _onBiometric : null,
+                        onBiometric: biometricEnabled && !_biometricBusy
+                            ? _onBiometric
+                            : null,
                         memberName: member?.name ?? 'kamu',
                         onSwitchAccount: _switchAccount,
                       ),
@@ -213,6 +224,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   Future<void> _onBiometric() async {
+    if (_biometricBusy) return;
+    setState(() => _biometricBusy = true);
     try {
       final enabled =
           await ref.read(sessionRepoProvider).get('biometricEnabled') == 'true';
@@ -222,36 +235,38 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
         }
         return;
       }
-      final isSupported = await _localAuth.isDeviceSupported();
-      if (!isSupported) {
-        if (mounted) AppToast.show(context, 'HP ini tidak mendukung biometrik');
-        return;
-      }
-      final canCheck = await _localAuth.canCheckBiometrics;
-      if (!canCheck) {
+
+      final unavailableReason = await _biometrics.unavailableReason();
+      if (unavailableReason != null) {
         if (mounted) {
-          AppToast.show(context, 'Biometrik tidak aktif di pengaturan HP');
+          AppToast.show(context, unavailableReason, success: false);
         }
         return;
       }
-      final available = await _localAuth.getAvailableBiometrics();
-      if (available.isEmpty) {
-        if (mounted) {
-          AppToast.show(context, 'Belum ada sidik jari/wajah terdaftar di HP');
-        }
-        return;
-      }
-      final ok = await _localAuth.authenticate(
-        localizedReason: 'Gunakan biometrik untuk masuk ke DuitKita',
+
+      final ok = await _biometrics.authenticate(
+        reason: 'Gunakan biometrik untuk masuk ke DuitKita',
       );
       if (ok && mounted) {
         context.go('/home');
+      } else if (mounted) {
+        AppToast.show(
+          context,
+          'Biometrik tidak dikenali. Coba lagi atau gunakan PIN',
+          success: false,
+        );
+      }
+    } on LocalAuthException catch (e) {
+      if (!_biometrics.isCancellation(e) && mounted) {
+        AppToast.show(context, _biometrics.userMessage(e), success: false);
       }
     } catch (e) {
       if (kDebugMode) print('[Biometric] error: $e');
       if (mounted) {
         AppToast.show(context, 'Gagal membuka biometrik. Coba lagi.');
       }
+    } finally {
+      if (mounted) setState(() => _biometricBusy = false);
     }
   }
 

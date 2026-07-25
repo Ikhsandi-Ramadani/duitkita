@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/providers/theme_provider.dart';
+import '../../core/services/biometric_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_text.dart';
@@ -697,44 +698,47 @@ class _DarkModeToggle extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _BiometricToggle extends ConsumerWidget {
-  static final _localAuth = LocalAuthentication();
+  static final _biometrics = BiometricService();
 
   Future<void> _onChanged(BuildContext context, WidgetRef ref, bool v) async {
+    final session = ref.read(sessionRepoProvider);
     if (!v) {
-      await ref.read(sessionRepoProvider).set('biometricEnabled', 'false');
+      await session.set('biometricEnabled', 'false');
       return;
     }
 
     try {
-      final isSupported = await _localAuth.isDeviceSupported();
-      if (!isSupported) {
+      if (await session.get('hasPin') != 'true') {
         if (context.mounted) {
           AppToast.show(
             context,
-            'HP ini tidak mendukung biometrik',
-            success: false,
-          );
-        }
-        return;
-      }
-      final canCheck = await _localAuth.canCheckBiometrics;
-      final available = await _localAuth.getAvailableBiometrics();
-      if (!canCheck || available.isEmpty) {
-        if (context.mounted) {
-          AppToast.show(
-            context,
-            'Belum ada sidik jari/wajah terdaftar di HP',
+            'Buat PIN aplikasi terlebih dahulu sebelum mengaktifkan biometrik',
             success: false,
           );
         }
         return;
       }
 
-      final confirmed = await _localAuth.authenticate(
-        localizedReason: 'Verifikasi biometrik untuk mengaktifkan fitur ini',
+      final unavailableReason = await _biometrics.unavailableReason();
+      if (unavailableReason != null) {
+        if (context.mounted) {
+          AppToast.show(context, unavailableReason, success: false);
+        }
+        return;
+      }
+
+      final confirmed = await _biometrics.authenticate(
+        reason: 'Verifikasi biometrik untuk mengaktifkan fitur ini',
       );
       if (confirmed) {
-        await ref.read(sessionRepoProvider).set('biometricEnabled', 'true');
+        await session.set('biometricEnabled', 'true');
+        if (context.mounted) {
+          AppToast.show(context, 'Biometrik berhasil diaktifkan');
+        }
+      }
+    } on LocalAuthException catch (e) {
+      if (!_biometrics.isCancellation(e) && context.mounted) {
+        AppToast.show(context, _biometrics.userMessage(e), success: false);
       }
     } catch (e) {
       if (kDebugMode) print('[BiometricToggle] error: $e');
