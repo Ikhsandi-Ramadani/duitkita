@@ -4,6 +4,273 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/filament/filament/inter/inter-latin-wght-normal-NRMW37G5.woff2') format('woff2');
+}
+
+:root {
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    margin: 0;
+    background: #f8fafc;
+    color: #334155;
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid rgb(16 185 129 / 20%);
+    outline-offset: 2px;
+}
+
+.admin-shell {
+    background:
+        radial-gradient(circle at 82% -10%, rgb(16 185 129 / 7%), transparent 28rem),
+        linear-gradient(180deg, #f8fafc 0%, #f5f7fa 100%);
+}
+
+.brand-mark {
+    background:
+        radial-gradient(circle at 75% 20%, rgb(255 255 255 / 28%), transparent 30%),
+        linear-gradient(145deg, #10b981, #047857);
+}
+
+.avatar-ring {
+    box-shadow: inset 0 0 0 1px rgb(16 185 129 / 12%);
+}
+
+.admin-nav {
+    scrollbar-color: #dbe4e9 transparent;
+    scrollbar-width: thin;
+}
+
+.admin-content {
+    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-width: thin;
+}
+
+.admin-content .rounded-xl.bg-white,
+.admin-content .rounded-2xl.bg-white {
+    border-color: rgb(226 232 240 / 78%);
+}
+
+.admin-content .shadow-sm {
+    box-shadow:
+        0 1px 2px rgb(15 23 42 / 3%),
+        0 8px 24px rgb(15 23 42 / 3%);
+}
+
+.stat-card {
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease,
+        border-color 180ms ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgb(203 213 225 / 90%);
+    box-shadow:
+        0 1px 2px rgb(15 23 42 / 3%),
+        0 16px 36px rgb(15 23 42 / 7%);
+}
+
+.hero-orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+.hero-orb-one {
+    top: -8rem;
+    right: 4%;
+    width: 22rem;
+    height: 22rem;
+    background: radial-gradient(circle, rgb(16 185 129 / 38%), rgb(16 185 129 / 0%) 68%);
+}
+
+.hero-orb-two {
+    bottom: -11rem;
+    left: 34%;
+    width: 20rem;
+    height: 20rem;
+    background: radial-gradient(circle, rgb(14 165 233 / 20%), rgb(14 165 233 / 0%) 70%);
+}
+
+.hero-action {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 180ms ease;
+}
+
+.hero-action:hover {
+    transform: translateY(-1px);
+}
+
+.hero-action-primary {
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
+}
+
+.hero-action-primary:hover {
+    background: #ecfdf5;
+}
+
+.hero-action-secondary {
+    border: 1px solid rgb(255 255 255 / 14%);
+    background: rgb(255 255 255 / 8%);
+    color: #fff;
+    backdrop-filter: blur(8px);
+}
+
+.hero-action-secondary:hover {
+    background: rgb(255 255 255 / 14%);
+}
+
+/* PrimeVue polish shared by all admin pages. */
+.admin-shell .p-component {
+    font-family: inherit;
+}
+
+.admin-shell .p-datatable-table-container {
+    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-width: thin;
+}
+
+.admin-shell .p-datatable-table {
+    min-width: 720px;
+}
+
+.admin-shell .p-datatable-thead > tr > th {
+    border-color: #eef2f6;
+    background: #f8fafc;
+    padding: 0.85rem 1.25rem;
+}
+
+.admin-shell .p-datatable-tbody > tr {
+    transition: background-color 150ms ease;
+}
+
+.admin-shell .p-datatable-tbody > tr > td {
+    border-color: #f1f5f9;
+    padding: 0.95rem 1.25rem;
+}
+
+.admin-shell .p-datatable-tbody > tr:hover {
+    background: #f8fafc;
+}
+
+.admin-shell .p-inputtext,
+.admin-shell .p-select,
+.admin-shell .p-datepicker-input,
+.admin-shell .p-textarea {
+    border-color: #dce4ea;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 2%);
+}
+
+.admin-shell .p-inputtext:enabled:hover,
+.admin-shell .p-select:not(.p-disabled):hover,
+.admin-shell .p-datepicker:not(.p-disabled):hover .p-datepicker-input {
+    border-color: #94a3b8;
+}
+
+.admin-shell .p-inputtext:enabled:focus,
+.admin-shell .p-select:not(.p-disabled).p-focus,
+.admin-shell .p-datepicker:not(.p-disabled).p-focus .p-datepicker-input {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgb(16 185 129 / 10%);
+}
+
+.admin-shell .p-button {
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+}
+
+.admin-shell .p-dialog {
+    overflow: hidden;
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
+}
+
+.admin-shell .p-dialog-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 1.25rem 1.5rem;
+}
+
+.admin-shell .p-dialog-content {
+    padding: 1.25rem 1.5rem;
+}
+
+.admin-shell .p-dialog-footer {
+    border-top: 1px solid #f1f5f9;
+    padding: 1rem 1.5rem;
+}
+
+.admin-shell .p-toast-message {
+    border-radius: 0.875rem;
+    box-shadow: 0 18px 45px rgb(15 23 42 / 14%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 180ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+@media (max-width: 640px) {
+    .admin-shell .p-dialog {
+        width: calc(100vw - 2rem) !important;
+        max-width: calc(100vw - 2rem);
+    }
+
+    .admin-shell .p-datatable-thead > tr > th,
+    .admin-shell .p-datatable-tbody > tr > td {
+        padding-inline: 1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

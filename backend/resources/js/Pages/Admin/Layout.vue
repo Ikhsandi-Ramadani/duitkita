@@ -1,117 +1,177 @@
 <template>
-    <div class="flex h-screen bg-slate-50 overflow-hidden">
-        <!-- Sidebar Overlay (mobile) -->
-        <div
-            v-if="sidebarOpen"
-            class="fixed inset-0 bg-black/40 z-20 lg:hidden"
-            @click="sidebarOpen = false"
-        />
+    <div class="admin-shell flex min-h-screen overflow-hidden">
+        <Transition name="fade">
+            <button
+                v-if="sidebarOpen"
+                type="button"
+                class="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
+                aria-label="Tutup navigasi"
+                @click="sidebarOpen = false"
+            />
+        </Transition>
 
-        <!-- Sidebar -->
         <aside
             :class="[
-                'fixed lg:static inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-slate-200 transition-transform duration-300',
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-                'w-64',
+                'admin-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-900/5 backdrop-blur-xl transition-all duration-300 lg:static lg:translate-x-0 lg:shadow-none',
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+                sidebarCollapsed ? 'lg:w-20' : 'lg:w-72',
             ]"
         >
-            <!-- Brand -->
-            <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-                <div class="w-9 h-9 rounded-xl bg-green-600 flex items-center justify-center shrink-0 shadow-sm">
-                    <span class="text-white font-bold text-base">D</span>
-                </div>
-                <div class="min-w-0">
-                    <p class="text-slate-900 font-bold text-base leading-tight">DuitKita</p>
-                    <p class="text-slate-400 text-xs">Admin Panel</p>
-                </div>
+            <div
+                :class="[
+                    'flex h-[76px] shrink-0 items-center border-b border-slate-100',
+                    sidebarCollapsed ? 'justify-center px-3' : 'justify-between px-5',
+                ]"
+            >
+                <Link href="/admin" class="flex min-w-0 items-center gap-3" @click="sidebarOpen = false">
+                    <div class="brand-mark relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-white shadow-lg shadow-emerald-600/20">
+                        <span class="relative z-10 text-lg font-extrabold tracking-tight">D</span>
+                    </div>
+                    <div v-if="!sidebarCollapsed" class="min-w-0">
+                        <p class="truncate text-[17px] font-extrabold tracking-tight text-slate-900">DuitKita</p>
+                        <p class="mt-0.5 text-[11px] font-medium tracking-wide text-slate-400">CONTROL CENTER</p>
+                    </div>
+                </Link>
+
+                <button
+                    v-if="!sidebarCollapsed"
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+                    aria-label="Tutup navigasi"
+                    @click="sidebarOpen = false"
+                >
+                    <i class="pi pi-times text-sm" />
+                </button>
             </div>
 
-            <!-- Nav -->
-            <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                <Link
-                    v-for="item in navItems"
-                    :key="item.href"
-                    :href="item.href"
-                    :class="[
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group',
-                        isActive(item.href)
-                            ? 'bg-green-50 text-green-700 font-semibold border-l-2 border-green-600 rounded-l-none'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-                    ]"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5 shrink-0"
-                        :class="isActive(item.href) ? 'text-green-600' : 'text-slate-400 group-hover:text-slate-600'"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        v-html="item.iconPath"
-                    />
-                    <span>{{ item.label }}</span>
-                </Link>
+            <nav class="admin-nav flex-1 overflow-y-auto px-3 py-5">
+                <div v-for="(group, groupIndex) in navGroups" :key="group.label" :class="groupIndex ? 'mt-6' : ''">
+                    <p
+                        v-if="!sidebarCollapsed"
+                        class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400"
+                    >
+                        {{ group.label }}
+                    </p>
+                    <div class="space-y-1">
+                        <Link
+                            v-for="item in group.items"
+                            :key="item.href"
+                            :href="item.href"
+                            :title="sidebarCollapsed ? item.label : undefined"
+                            :class="[
+                                'group relative flex min-h-11 items-center rounded-xl text-sm font-medium transition-all duration-200',
+                                sidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                                isActive(item.href)
+                                    ? 'bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-900/5'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                            ]"
+                            @click="sidebarOpen = false"
+                        >
+                            <span
+                                v-if="isActive(item.href)"
+                                class="absolute inset-y-2 left-0 w-1 rounded-r-full bg-emerald-500"
+                            />
+                            <span
+                                :class="[
+                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                                    isActive(item.href)
+                                        ? 'bg-white text-emerald-600 shadow-sm'
+                                        : 'text-slate-400 group-hover:bg-white group-hover:text-slate-600 group-hover:shadow-sm',
+                                ]"
+                            >
+                                <i :class="[item.icon, 'text-[15px]']" />
+                            </span>
+                            <span v-if="!sidebarCollapsed" class="truncate">{{ item.label }}</span>
+                            <i
+                                v-if="!sidebarCollapsed && isActive(item.href)"
+                                class="pi pi-chevron-right ml-auto text-[10px] text-emerald-400"
+                            />
+                        </Link>
+                    </div>
+                </div>
             </nav>
 
-            <!-- User info + logout -->
-            <div class="px-4 py-4 border-t border-slate-100 space-y-3">
-                <div class="flex items-center gap-2 px-1">
-                    <div class="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </div>
-                    <p class="text-slate-500 text-xs truncate">{{ auth?.user?.email }}</p>
-                </div>
-                <button
-                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
-                    @click="logout"
+            <div class="shrink-0 border-t border-slate-100 p-3">
+                <div
+                    :class="[
+                        'rounded-2xl border border-slate-100 bg-slate-50/80',
+                        sidebarCollapsed ? 'p-2' : 'p-3',
+                    ]"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    <span>Keluar</span>
-                </button>
+                    <div :class="['flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-3']">
+                        <div class="avatar-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+                            <span class="text-sm font-bold text-emerald-700">
+                                {{ userInitial }}
+                            </span>
+                        </div>
+                        <div v-if="!sidebarCollapsed" class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-semibold text-slate-800">{{ auth?.user?.name }}</p>
+                            <p class="truncate text-[11px] text-slate-400">{{ auth?.user?.email }}</p>
+                        </div>
+                        <button
+                            v-if="!sidebarCollapsed"
+                            type="button"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                            title="Keluar"
+                            aria-label="Keluar"
+                            @click="logout"
+                        >
+                            <i class="pi pi-sign-out text-sm" />
+                        </button>
+                    </div>
+                </div>
             </div>
         </aside>
 
-        <!-- Main -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <!-- Top Bar -->
-            <header class="flex items-center justify-between px-4 lg:px-6 py-4 bg-white border-b border-slate-200 shrink-0">
-                <!-- Hamburger (mobile) -->
+        <div class="flex min-w-0 flex-1 flex-col">
+            <header class="admin-topbar sticky top-0 z-20 flex h-[76px] shrink-0 items-center border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
                 <button
-                    class="lg:hidden text-slate-500 hover:text-slate-800 p-1"
-                    @click="sidebarOpen = !sidebarOpen"
+                    type="button"
+                    class="mr-3 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-200 hover:text-emerald-600 lg:hidden"
+                    aria-label="Buka navigasi"
+                    @click="sidebarOpen = true"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                    <i class="pi pi-bars" />
                 </button>
 
-                <!-- Page title -->
-                <div class="hidden lg:flex items-center gap-2">
-                    <span class="text-slate-400 text-sm">Admin</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                    <span class="text-slate-800 font-semibold text-sm">{{ currentPageTitle }}</span>
+                <button
+                    type="button"
+                    class="mr-4 hidden h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:flex"
+                    :title="sidebarCollapsed ? 'Perbesar sidebar' : 'Perkecil sidebar'"
+                    @click="toggleSidebar"
+                >
+                    <i :class="sidebarCollapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'" class="text-sm" />
+                </button>
+
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 class="truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+                            {{ currentPage.label }}
+                        </h1>
+                        <span class="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+                        <span class="hidden text-xs text-slate-400 sm:block">{{ currentPage.section }}</span>
+                    </div>
+                    <p class="mt-0.5 hidden truncate text-xs text-slate-400 md:block">
+                        {{ currentPage.description }}
+                    </p>
                 </div>
 
-                <!-- Right side -->
-                <div class="flex items-center gap-3 ml-auto">
-                    <span class="text-slate-500 text-sm hidden sm:block">{{ auth?.user?.name }}</span>
-                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <span class="text-green-700 font-semibold text-sm">
-                            {{ (auth?.user?.name ?? 'A').charAt(0).toUpperCase() }}
-                        </span>
+                <div class="ml-auto flex items-center gap-3">
+                    <div class="hidden items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm xl:flex">
+                        <i class="pi pi-calendar text-emerald-500" />
+                        <span>{{ currentDate }}</span>
+                    </div>
+                    <div class="hidden h-8 w-px bg-slate-200 sm:block" />
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md shadow-slate-900/10">
+                        <span class="text-sm font-bold">{{ userInitial }}</span>
                     </div>
                 </div>
             </header>
 
-            <!-- Content -->
-            <main class="flex-1 overflow-y-auto p-4 lg:p-6">
-                <slot />
+            <main class="admin-content flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+                <div class="mx-auto w-full max-w-[1600px]">
+                    <slot />
+                </div>
             </main>
         </div>
 
@@ -120,88 +180,146 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { usePage, router, Link } from '@inertiajs/vue3'
+import { computed, ref, watch } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
 const page = usePage()
 const auth = computed(() => page.props.auth)
 const toast = useToast()
+const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(window.localStorage.getItem('admin-sidebar-collapsed') === 'true')
+
+const navGroups = [
+    {
+        label: 'Ringkasan',
+        items: [
+            {
+                href: '/admin',
+                label: 'Dashboard',
+                section: 'Ringkasan',
+                description: 'Pantau aktivitas dan performa DuitKita.',
+                icon: 'pi pi-chart-pie',
+            },
+        ],
+    },
+    {
+        label: 'Manajemen',
+        items: [
+            {
+                href: '/admin/users',
+                label: 'Pengguna',
+                section: 'Manajemen',
+                description: 'Kelola akun dan akses pengguna.',
+                icon: 'pi pi-users',
+            },
+            {
+                href: '/admin/households',
+                label: 'Keluarga',
+                section: 'Manajemen',
+                description: 'Lihat dan kelola grup keluarga.',
+                icon: 'pi pi-home',
+            },
+            {
+                href: '/admin/transactions',
+                label: 'Transaksi',
+                section: 'Keuangan',
+                description: 'Pantau seluruh aktivitas transaksi.',
+                icon: 'pi pi-arrow-right-arrow-left',
+            },
+            {
+                href: '/admin/wallets',
+                label: 'Dompet',
+                section: 'Keuangan',
+                description: 'Kelola sumber dana pengguna.',
+                icon: 'pi pi-wallet',
+            },
+            {
+                href: '/admin/categories',
+                label: 'Kategori',
+                section: 'Keuangan',
+                description: 'Atur klasifikasi pemasukan dan pengeluaran.',
+                icon: 'pi pi-tags',
+            },
+            {
+                href: '/admin/budgets',
+                label: 'Anggaran',
+                section: 'Keuangan',
+                description: 'Pantau rencana anggaran keluarga.',
+                icon: 'pi pi-chart-bar',
+            },
+        ],
+    },
+    {
+        label: 'Sistem',
+        items: [
+            {
+                href: '/admin/settings/app-version',
+                label: 'Versi Aplikasi',
+                section: 'Pengaturan',
+                description: 'Kelola versi dan pembaruan aplikasi.',
+                icon: 'pi pi-mobile',
+            },
+            {
+                href: '/admin/settings/data-reset',
+                label: 'Reset Data',
+                section: 'Pengaturan',
+                description: 'Bersihkan data testing dengan aman.',
+                icon: 'pi pi-refresh',
+            },
+        ],
+    },
+]
+
+const navItems = navGroups.flatMap(group => group.items)
+
+function isActive(href) {
+    const url = page.url.split('?')[0]
+    if (href === '/admin') return url === '/admin' || url === '/admin/'
+    return url.startsWith(href)
+}
+
+const currentPage = computed(() =>
+    navItems.find(item => isActive(item.href)) ?? {
+        label: 'Admin',
+        section: 'DuitKita',
+        description: 'Kelola aplikasi DuitKita.',
+    }
+)
+
+const currentDate = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+}).format(new Date())
+
+const userInitial = computed(() => (auth.value?.user?.name ?? 'A').charAt(0).toUpperCase())
 
 watch(
     () => page.props.flash,
-    (flash) => {
+    flash => {
         if (flash?.success) {
-            toast.add({ severity: 'success', summary: 'Berhasil', detail: flash.success, life: 3000 })
+            toast.add({ severity: 'success', summary: 'Berhasil', detail: flash.success, life: 3200 })
         }
         if (flash?.error) {
-            toast.add({ severity: 'error', summary: 'Gagal', detail: flash.error, life: 4000 })
+            toast.add({ severity: 'error', summary: 'Gagal', detail: flash.error, life: 4200 })
         }
     },
     { immediate: false }
 )
-const sidebarOpen = ref(false)
 
-const navItems = [
-    {
-        href: '/admin',
-        label: 'Dashboard',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />',
-    },
-    {
-        href: '/admin/users',
-        label: 'Users',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />',
-    },
-    {
-        href: '/admin/households',
-        label: 'Households',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />',
-    },
-    {
-        href: '/admin/categories',
-        label: 'Kategori',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />',
-    },
-    {
-        href: '/admin/transactions',
-        label: 'Transaksi',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />',
-    },
-    {
-        href: '/admin/wallets',
-        label: 'Wallets',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />',
-    },
-    {
-        href: '/admin/budgets',
-        label: 'Budgets',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />',
-    },
-    {
-        href: '/admin/settings/app-version',
-        label: 'Versi Aplikasi',
-        iconPath: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />',
-    },
-]
-
-function isActive(href) {
-    const url = page.url
-    if (href === '/admin') {
-        return url === '/admin' || url === '/admin/'
+watch(
+    () => page.url,
+    () => {
+        sidebarOpen.value = false
     }
-    return url.startsWith(href)
-}
+)
 
-const currentPageTitle = computed(() => {
-    const url = page.url
-    const item = navItems.find(n => {
-        if (n.href === '/admin') return url === '/admin' || url === '/admin/'
-        return url.startsWith(n.href)
-    })
-    return item?.label ?? 'Admin'
-})
+function toggleSidebar() {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+    window.localStorage.setItem('admin-sidebar-collapsed', String(sidebarCollapsed.value))
+}
 
 function logout() {
     router.post('/admin/logout')

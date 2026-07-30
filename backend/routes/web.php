@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BudgetController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DataResetController;
 use App\Http\Controllers\Admin\HouseholdController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
@@ -54,5 +55,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('settings/app-version', [AppVersionController::class, 'index'])->name('settings.app-version');
         Route::post('settings/app-version', [AppVersionController::class, 'update'])->name('settings.app-version.update');
+        Route::get('settings/data-reset', [DataResetController::class, 'index'])->name('settings.data-reset');
+        Route::delete('settings/data-reset', [DataResetController::class, 'destroy'])->name('settings.data-reset.destroy');
     });
 });

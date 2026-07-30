@@ -25,6 +25,20 @@ class AdminAuthenticationTest extends TestCase
             ->assertRedirect(route('admin.dashboard'));
     }
 
+    public function test_authenticated_super_admin_can_open_dashboard(): void
+    {
+        $this->withoutVite();
+        $admin = User::factory()->create(['is_super_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Dashboard')
+                ->has('stats')
+                ->has('chartData'));
+    }
+
     public function test_authenticated_super_admin_cannot_revisit_login_page(): void
     {
         $admin = User::factory()->create(['is_super_admin' => true]);
