@@ -19,3 +19,8 @@ mobile/*.iml
 # Env
 .env
 .env.*.local
+
+# DuitKita — data runtime (database & storage) tidak boleh masuk repo
+data/
+backend/public/build/
+backend/public/hot

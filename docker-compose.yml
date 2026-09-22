@@ -1,0 +1,64 @@
+# ==================== DuitKita ====================
+# Laravel 13 + Inertia Vue 3 + Sanctum + MySQL 8.4
+#
+# Catatan desain:
+# - Container aplikasi TIDAK membuka port ke host. Caddy milik project
+#   ita-trans yang meneruskan permintaan lewat jaringan internal.
+#   Port 80/443 hanya boleh dipakai satu proses di seluruh server.
+# - Network dibuat terpisah (external) supaya project ini tidak pernah
+#   saling mengganggu dengan ita-trans / my-website / liputan-macca / waha.
+# - MySQL sengaja punya container sendiri agar data DuitKita terisolasi.
+
+version: '3.8'
+
+services:
+  app:
+    image: duitkita-app:latest
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: duitkita-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # storage di-host agar log, cache, dan berkas unggahan tetap ada
+      # walaupun container dibuat ulang.
+      - ./data/storage:/var/www/html/storage
+    networks:
+      - duitkita_network
+    depends_on:
+      - mysql
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  mysql:
+    image: mysql:8.4
+    container_name: duitkita-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    networks:
+      - duitkita_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  duitkita_network:
+    external: true

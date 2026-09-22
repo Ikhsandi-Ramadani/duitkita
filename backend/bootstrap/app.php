@@ -17,6 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectUsersTo('/admin');
 
+        // Di server ini Caddy berdiri di depan sebagai reverse proxy.
+        // Tanpa ini Laravel menganggap semua permintaan datang lewat http,
+        // sehingga tautan yang dihasilkan memakai http:// dan cookie
+        // "secure" tidak ikut terkirim.
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);

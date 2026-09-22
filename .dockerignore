@@ -1,0 +1,28 @@
+# Berkas yang tidak perlu ikut ke dalam build context Docker.
+# mobile/  : aplikasi Flutter, dibangun terpisah oleh workflow build-apk.yml
+# screenshots/ : dokumentasi, tidak dipakai saat menjalankan server
+.git
+.github
+.vscode
+mobile
+screenshots
+app
+DuitKita.html
+tweaks-panel.jsx
+
+# Rahasia dan data runtime
+.env
+.env.*
+!.env.example
+data/
+*.log
+
+# Hasil build lokal yang bisa dibuat ulang di dalam image
+backend/node_modules
+backend/vendor
+backend/public/build
+backend/public/hot
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
