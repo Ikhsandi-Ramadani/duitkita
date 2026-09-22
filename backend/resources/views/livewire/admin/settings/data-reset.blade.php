@@ -1,0 +1,11 @@
+<div>
+    <x-admin.page-header title="Reset data" description="Hapus data aplikasi tanpa menghapus akun super admin dan pengaturan versi." />
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <form wire:submit="resetData" class="admin-card p-5 sm:p-7">
+            <div class="rounded-lg border border-rose-200 bg-rose-50 p-4"><h2 class="text-base font-extrabold text-rose-900">Tindakan permanen</h2><p class="mt-1 text-sm leading-6 text-rose-800">Reset akan menghapus data keluarga, pengguna non-admin, dompet, transaksi, kategori, dan data operasional lain. Pastikan data ini memang data uji.</p></div>
+            <div class="mt-6 space-y-5"><div><label for="reset-password" class="mb-1 block text-sm font-bold text-slate-800">Password admin</label><input id="reset-password" type="password" wire:model="current_password" class="admin-input" autocomplete="current-password">@error('current_password')<p class="admin-error">{{ $message }}</p>@enderror</div><div><label for="reset-confirmation" class="mb-1 block text-sm font-bold text-slate-800">Ketik <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{{ $confirmationPhrase }}</code></label><input id="reset-confirmation" wire:model="confirmation" class="admin-input" autocomplete="off">@error('confirmation')<p class="admin-error">{{ $message }}</p>@enderror</div></div>
+            <div class="mt-6 flex justify-end border-t border-slate-100 pt-5"><button type="submit" class="admin-button admin-button-danger" wire:loading.attr="disabled" @disabled($confirmation !== $confirmationPhrase || ! $current_password)>Reset data aplikasi</button></div>
+        </form>
+        <aside class="admin-card p-5 sm:p-6"><h2 class="text-base font-extrabold text-slate-900">Data yang akan dihitung</h2><p class="mt-1 text-sm text-slate-600">Jumlah saat halaman ini dibuka.</p><dl class="mt-5 divide-y divide-slate-100">@foreach($counts as $label => $count)<div class="flex items-center justify-between gap-4 py-3"><dt class="text-sm font-semibold text-slate-700">{{ str($label)->replace('_', ' ')->title() }}</dt><dd class="text-sm font-extrabold text-slate-950">{{ number_format($count, 0, ',', '.') }}</dd></div>@endforeach</dl></aside>
+    </div>
+</div>

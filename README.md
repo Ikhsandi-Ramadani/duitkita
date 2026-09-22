@@ -8,7 +8,7 @@ Paket ini berisi **prototipe mobile lengkap** (16+ layar, fully clickable) yang 
 ## About the Design Files
 File dalam bundel ini adalah **referensi desain yang dibuat dengan HTML/React (via Babel in-browser)** — prototipe yang menunjukkan tampilan & perilaku yang diinginkan, **bukan kode produksi untuk disalin langsung**.
 
-Tugasnya: **membangun ulang desain ini di environment target**. Sesuai PRD, target implementasi adalah **Flutter** (Riverpod/Bloc untuk state, Drift/Isar/sqflite untuk DB lokal + sync queue, `local_auth` untuk app lock, `fl_chart` untuk grafik). Gunakan pola & widget native Flutter — jangan menyalin struktur DOM/CSS apa adanya. Backend: Laravel + API (Sanctum), dashboard web Filament (dibrief terpisah).
+Tugasnya: **membangun ulang desain ini di environment target**. Sesuai PRD, target implementasi adalah **Flutter** (Riverpod/Bloc untuk state, Drift/Isar/sqflite untuk DB lokal + sync queue, `local_auth` untuk app lock, `fl_chart` untuk grafik). Gunakan pola & widget native Flutter — jangan menyalin struktur DOM/CSS apa adanya. Backend: Laravel + API (Sanctum), halaman admin Blade + Tailwind CSS + Livewire.
 
 Semua warna, tipografi, spacing, ikon, dan interaksi di bawah ini bersifat **final (hi-fi)** dan harus direproduksi seakurat mungkin.
 

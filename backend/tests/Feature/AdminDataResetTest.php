@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+use App\Livewire\Admin\Settings\DataReset;
 use Tests\TestCase;
 
 class AdminDataResetTest extends TestCase
@@ -29,10 +31,8 @@ class AdminDataResetTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.settings.data-reset'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('Admin/Settings/DataReset')
-                ->has('counts')
-                ->where('confirmationPhrase', 'RESET DATA'));
+            ->assertSee('Reset data')
+            ->assertSee('RESET DATA');
     }
 
     public function test_reset_requires_correct_password_and_confirmation_phrase(): void
@@ -43,14 +43,13 @@ class AdminDataResetTest extends TestCase
         ]);
         $member = User::factory()->create(['is_super_admin' => false]);
 
-        $this->actingAs($admin)
-            ->from(route('admin.settings.data-reset'))
-            ->delete(route('admin.settings.data-reset.destroy'), [
-                'current_password' => 'wrong-password',
-                'confirmation' => 'RESET',
-            ])
-            ->assertRedirect(route('admin.settings.data-reset'))
-            ->assertSessionHasErrors(['current_password', 'confirmation']);
+        $this->actingAs($admin);
+
+        Livewire::test(DataReset::class)
+            ->set('current_password', 'wrong-password')
+            ->set('confirmation', 'RESET')
+            ->call('resetData')
+            ->assertHasErrors(['current_password', 'confirmation']);
 
         $this->assertDatabaseHas('users', ['id' => $member->id]);
     }
@@ -93,13 +92,13 @@ class AdminDataResetTest extends TestCase
         Storage::disk('public')->put('avatars/admin.jpg', 'admin-avatar');
         Storage::disk('public')->put('avatars/member.jpg', 'member-avatar');
 
-        $this->actingAs($admin)
-            ->delete(route('admin.settings.data-reset.destroy'), [
-                'current_password' => 'admin-password',
-                'confirmation' => 'RESET DATA',
-            ])
-            ->assertRedirect(route('admin.settings.data-reset'))
-            ->assertSessionHas('success');
+        $this->actingAs($admin);
+
+        Livewire::test(DataReset::class)
+            ->set('current_password', 'admin-password')
+            ->set('confirmation', 'RESET DATA')
+            ->call('resetData')
+            ->assertHasNoErrors();
 
         $this->assertDatabaseMissing('users', ['id' => $member->id]);
         $this->assertDatabaseMissing('households', ['id' => $household->id]);
@@ -124,10 +123,7 @@ class AdminDataResetTest extends TestCase
         ]);
 
         $this->actingAs($member)
-            ->delete(route('admin.settings.data-reset.destroy'), [
-                'current_password' => 'member-password',
-                'confirmation' => 'RESET DATA',
-            ])
+            ->get(route('admin.settings.data-reset'))
             ->assertRedirect(route('admin.login'));
 
         $this->assertDatabaseHas('users', ['id' => $member->id]);

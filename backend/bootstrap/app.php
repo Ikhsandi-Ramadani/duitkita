@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\EnsureSuperAdmin;
-use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,11 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // sehingga tautan yang dihasilkan memakai http:// dan cookie
         // "secure" tidak ikut terkirim.
         $middleware->trustProxies(at: '*');
-
-        $middleware->web(append: [
-            HandleInertiaRequests::class,
-        ]);
-
         $middleware->alias([
             'super_admin' => EnsureSuperAdmin::class,
         ]);

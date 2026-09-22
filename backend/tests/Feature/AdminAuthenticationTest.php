@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use App\Livewire\Admin\Login;
 use Tests\TestCase;
 
 class AdminAuthenticationTest extends TestCase
@@ -33,10 +35,8 @@ class AdminAuthenticationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('Admin/Dashboard')
-                ->has('stats')
-                ->has('chartData'));
+            ->assertSee('Ringkasan')
+            ->assertSee('Arus transaksi enam bulan terakhir');
     }
 
     public function test_authenticated_super_admin_cannot_revisit_login_page(): void
@@ -56,15 +56,11 @@ class AdminAuthenticationTest extends TestCase
             'is_super_admin' => false,
         ]);
 
-        $this->from(route('admin.login'))
-            ->post(route('admin.login'), [
-                'email' => $user->email,
-                'password' => 'password',
-            ])
-            ->assertRedirect(route('admin.login'))
-            ->assertSessionHasErrors([
-                'email' => 'Akun tidak memiliki akses admin.',
-            ]);
+        Livewire::test(Login::class)
+            ->set('email', $user->email)
+            ->set('password', 'password')
+            ->call('authenticate')
+            ->assertHasErrors(['email' => 'Akun tidak memiliki akses admin.']);
 
         $this->assertGuest();
     }
@@ -89,10 +85,11 @@ class AdminAuthenticationTest extends TestCase
             'is_super_admin' => true,
         ]);
 
-        $this->post(route('admin.login'), [
-            'email' => $admin->email,
-            'password' => 'password',
-        ])->assertRedirect('/admin');
+        Livewire::test(Login::class)
+            ->set('email', $admin->email)
+            ->set('password', 'password')
+            ->call('authenticate')
+            ->assertRedirect(route('admin.dashboard'));
 
         $this->assertAuthenticatedAs($admin);
     }
