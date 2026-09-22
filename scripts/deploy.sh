@@ -68,20 +68,20 @@ sudo docker-compose up -d --no-build --no-deps app
 
 echo "⏳      menunggu aplikasi siap..."
 for i in $(seq 1 40); do
-  if docker exec duitkita-app curl -fsS -m 5 http://localhost/up >/dev/null 2>&1; then
+  if sudo docker exec duitkita-app curl -fsS -m 5 http://localhost/up >/dev/null 2>&1; then
     echo "   aplikasi merespons."
     break
   fi
   if [[ "$i" == "40" ]]; then
-    echo "❌ Aplikasi tidak merespons setelah 200 detik. Cek: docker logs duitkita-app"
+    echo "❌ Aplikasi tidak merespons setelah 200 detik. Cek: sudo docker logs duitkita-app"
     exit 1
   fi
   sleep 5
 done
 
 echo "🗄️  [6/6] Jalankan migrasi database..."
-docker exec duitkita-app php artisan migrate --force
+sudo docker exec duitkita-app php artisan migrate --force
 
 echo
 echo "✅ Deploy selesai."
-docker-compose ps
+sudo docker-compose ps
