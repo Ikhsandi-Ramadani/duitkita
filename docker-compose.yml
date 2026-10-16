@@ -25,8 +25,17 @@ services:
       # storage di-host agar log, cache, dan berkas unggahan tetap ada
       # walaupun container dibuat ulang.
       - ./data/storage:/var/www/html/storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.duitkita.rule=Host(`duitkita.ikhsandi.web.id`)"
+      - "traefik.http.routers.duitkita.entrypoints=websecure"
+      - "traefik.http.routers.duitkita.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.duitkita.middlewares=security-headers@file,gzip@file"
+      - "traefik.http.services.duitkita.loadbalancer.server.port=80"
     networks:
       - duitkita_network
+      - traefik
     depends_on:
       - mysql
     healthcheck:
@@ -61,4 +70,6 @@ services:
 
 networks:
   duitkita_network:
+    external: true
+  traefik:
     external: true
